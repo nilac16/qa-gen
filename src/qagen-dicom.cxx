@@ -196,7 +196,7 @@ void RPReader::read_beams(void)
     DcmItem *item;
     for (std::uint32_t i = 0; i < m_rp->nbeams; i++) {
         stat = m_dset->findAndGetSequenceItem(DCM_IonBeamSequence, item, i);
-        Exception::ofcheck(stat, failfmt, i);
+        Exception::ofcheck(stat, failfmt, i + 1);
         read_single_beam(item, i);
     }
 }

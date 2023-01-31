@@ -52,10 +52,6 @@ int qagen_string_concatf(wchar_t       *restrict *dst,
                          size_t                  *dstcount,
                          const wchar_t *restrict  fmt,
                          ...)
-/** What to do, what to do
- *   - Take wchar_t *cat = wcschr(*dst, L'\0');
- *   - Take size_t   catlen = *dstlen - (cat - *dst);
- */
 {
     static const wchar_t *failmsg = L"Failed to concatenate formatted string";
     const size_t origlen = wcslen(*dst);

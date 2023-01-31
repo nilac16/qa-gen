@@ -39,7 +39,7 @@ struct qagen_app {
 /** @brief Initializes the application. The very first thing this function
  *  does is to set the static application state pointer
  *  @param app
- *      Application state object, zeroed and placed somewhere
+ *      Application state object. The first three members must be set
  *  @returns Nonzero on error
  */
 int qagen_app_open(struct qagen_app *app);

@@ -5,7 +5,7 @@
 
 int qagen_console_init(struct qagen_console *cons)
 {
-    static const wchar_t *failmsg = L"Failed to console output handle";
+    static const wchar_t *failmsg = L"Failed to fetch console output handle";
     AllocConsole(); /* This call is redundant now that I no longer use WinMain */
     cons->hcons = GetStdHandle(STD_OUTPUT_HANDLE);
     if (cons->hcons != INVALID_HANDLE_VALUE) {

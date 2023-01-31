@@ -140,7 +140,7 @@ static int qagen_copy_prepare(struct qagen_copy_ctx      *ctx,
         return 1;
     }
     qagen_copy_format_bytes(ctx->total, &si, &signif);
-    qagen_log_printf(QAGEN_LOG_INFO, L"Ready to copy: %u files totaling %d %s", ctx->nfiles, signif, si);
+    qagen_log_printf(QAGEN_LOG_INFO, L"Ready to copy: %u file%s totaling %d %s", ctx->nfiles, PLFW(ctx->nfiles), signif, si);
     return 0;
 }
 

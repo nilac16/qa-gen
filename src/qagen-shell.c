@@ -81,7 +81,7 @@ static int qagen_search_rs_rtplan(struct qagen_patient *pt,
 
 
 /** @brief Enumerates all RD files in @p rspath and accepts only those with a
- *      valid beam number and the same series time as the RP file. After a
+ *      valid beam number and the same instance UID as the RP file. After a
  *      successful call, the RD list in the patient context will contain the
  *      relevant RD files
  *  @param pt
@@ -99,13 +99,13 @@ static int qagen_search_rs_rtdose(struct qagen_patient *pt,
     unsigned len;
     pt->rtdose = qagen_file_enumerate(QAGEN_FILE_DCM_RD, rspath, pattern);
     len = qagen_file_list_len(pt->rtdose);
-    qagen_log_printf(QAGEN_LOG_INFO, L"Found %u RD files", len);
+    qagen_log_printf(QAGEN_LOG_INFO, L"Found %u RD file%s", len, PLFW(len));
     qagen_file_filter_rd(&pt->rtdose, pt->rtplan);
     len = qagen_file_list_len(pt->rtdose);
-    qagen_log_printf(QAGEN_LOG_INFO, L"Filtered to %u RD files", len);
+    qagen_log_printf(QAGEN_LOG_INFO, L"Filtered to %u RD file%s", len, PLFW(len));
     if (len != xpected) {
         if (!qagen_error_state()) {
-            qagen_error_raise(QAGEN_ERR_RUNTIME, failmsg, L"Expected %u beams, found %u", xpected, len);
+            qagen_error_raise(QAGEN_ERR_RUNTIME, failmsg, L"Expected %u beam%s, found %u", xpected, PLFW(xpected), len);
         }
         return 1;
     } else {
@@ -166,7 +166,7 @@ static void qagen_search_mc2_types(struct qagen_patient *pt,
         *state = MC2_SEARCH_FOUND_DICOM;
         qagen_file_list_free(pt->dose_beam);
         pt->dose_beam = head;
-        qagen_log_printf(QAGEN_LOG_INFO, L"Found %u DICOM Dose_Beams", len);
+        qagen_log_printf(QAGEN_LOG_INFO, L"Found %u DICOM Dose_Beams%s", len, PLFW(len));
     } else {
         qagen_log_printf(QAGEN_LOG_WARN, L"Found %u DICOM Dose_Beam%s, expected %u", len, PLFW(len), xpected);
         qagen_ptr_nullify(&head, qagen_file_list_free);
@@ -180,7 +180,7 @@ static void qagen_search_mc2_types(struct qagen_patient *pt,
         } else if (len == xpected) {
             *state = MC2_SEARCH_FOUND_MHD;
             pt->dose_beam = head;
-            qagen_log_printf(QAGEN_LOG_INFO, L"Found %u MHD Dose_Beams", len);
+            qagen_log_printf(QAGEN_LOG_INFO, L"Found %u MHD Dose_Beam%s", len, PLFW(len));
         } else {
             qagen_log_printf(QAGEN_LOG_WARN, L"Found %u MHD Dose_Beam%s, expected %u", len, PLFW(len), xpected);
             qagen_file_list_free(head);
@@ -298,7 +298,7 @@ static HANDLE qagen_search_mc2_findfirst(const PATH      *mc2path,
 
 
 /** @brief Searches all possible subdirectories of @p mc2path for Dose_Beams
- *  @details The first folder searched is Outputs. The algorithm is:
+ *  @details ~~The first folder searched is Outputs.~~ The algorithm is:
  *      - Search for DICOM files first
  *      - If we don't have enough DICOM files, search for MHD files
  *      - Regardless of whether we found enough MHD files, we continue to the

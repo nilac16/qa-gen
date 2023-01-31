@@ -96,7 +96,7 @@ void qagen_debug_memtable_insert(const void *addr)
     memtable.table[hash].nframe = CaptureStackBackTrace(2, BUFLEN(memtable.table[hash].frame), memtable.table[hash].frame, NULL);
     memtable.load++;
     if (memtable.load > MEM_LOAD_CAP) {
-        qagen_log_printf(QAGEN_LOG_WARN, L"Memtable: Load factor %llu is dangerously high", memtable.load);
+        qagen_log_printf(QAGEN_LOG_WARN, L"Memtable: Load factor %u is dangerously high", memtable.load);
     }
 }
 
@@ -203,7 +203,7 @@ void qagen_debug_memtable_log_extant(void)
             count++;
         }
     }
-    qagen_log_printf(QAGEN_LOG_DEBUG, L"Memtable: %u extant pointer%s", count, (count == 1) ? L"" : L"s");
+    qagen_log_printf(QAGEN_LOG_DEBUG, L"Memtable: %u extant pointer%s", count, PLFW(count));
     if (count != memtable.load) {
         qagen_log_printf(QAGEN_LOG_ERROR, L"Memtable: Extant count %u differs from load factor %u", count, memtable.load);
     }

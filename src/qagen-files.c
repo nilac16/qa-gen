@@ -206,9 +206,7 @@ struct qagen_file *qagen_file_list_extract(struct qagen_file *head, int idx)
 }
 
 
-/** @note This function is pretty bad... Please rewrite this to be a little bit
- *      more sane
- *  @note LOLOLOLOLOLOLOL computers are fast lmao
+/** @note This function is candidate for a rewrite
  */
 static wchar_t *qagen_file_single_string(const struct qagen_file *head)
 {

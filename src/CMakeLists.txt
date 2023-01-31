@@ -1,0 +1,22 @@
+set(QAGEN_SOURCES
+    ${CMAKE_CURRENT_LIST_DIR}/main.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-app.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-shell.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-copy.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-patient.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-json.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-excel.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-files.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-dicom.cxx
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-metaio.cxx
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-filedlg.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-progdlg.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-rpwnd.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-path.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-string.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-console.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-memory.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-debug.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-error.c
+    ${CMAKE_CURRENT_LIST_DIR}/qagen-log.c
+    PARENT_SCOPE)

@@ -30,9 +30,12 @@ struct qagen_copy_ctx {
 
     struct qagen_progdlg pdlg;
 
+    /** @note The progress dialog exposes no method to actually do either of
+     *      these things, with the potential exception of just destroying the
+     *      window to hide it
+     */
     BOOL opcancel;
-
-    BOOL hide;  /* If a pdlg error occurs, just hide it */
+    BOOL hide;
 
     uint32_t nfiles;    /* Number of files, set before the operation, and not
                         modified during it */

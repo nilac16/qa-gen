@@ -1,6 +1,9 @@
 #pragma once
 /** @file Various debugging utilities (it's the bits of GDB that I just can't
  *      seem to find on Windows)
+ * 
+ *      Consider making this into an injectable DLL, this code isn't really
+ *      necessary on release builds, and I'm compiling it in anyway
  */
 #ifndef QAGEN_DEBUG_H
 #define QAGEN_DEBUG_H
@@ -33,7 +36,7 @@ void qagen_debug_memtable_insert(const void *addr);
 void qagen_debug_memtable_delete(const void *addr);
 
 
-/** @brief Gets the UID of @p addr in the pointer table
+/** @brief Checks if @p addr is in the pointer table
  *  @param addr
  *      Pointer to look up
  *  @returns Nonzero if found, zero if not found
@@ -42,7 +45,7 @@ int qagen_debug_memtable_lookup(const void *addr);
 
 
 /** @brief Logs all extant pointers in the table. If a pointer is found, up to
- *      16 stack frames from the site of the call to qagen_malloc (or other
+ *      4 stack frames from the site of the call to qagen_malloc (or other
  *      function) are sent to debug logs
  */
 void qagen_debug_memtable_log_extant(void);

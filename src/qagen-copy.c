@@ -38,6 +38,50 @@ static void qagen_copy_format_bytes(LONGLONG        bytes,
 }
 
 
+/** @brief Formats time in nanoseconds to the most natural units
+ *  @param[in,out] ns
+ *      On input, time in seconds. On output, time in whatever units are placed
+ *      in @p si
+ *  @param[out] si
+ *      Pointer to location that the unit string is stored to
+ */
+static void qagen_copy_format_time(double *sec, const wchar_t **si)
+{
+    static const wchar_t *pfix[] = { L"ns", L"μs", L"ms", L"s", L"min", L"hr", L"day" };
+    unsigned i = 3;
+    if (*sec < 1e0) {
+        do {
+            *sec *= 1e3;
+            i--;
+        } while (i && *sec < 1e0);
+    } else if (*sec > 60.0) {
+        *sec /= 60.0;
+        i++;
+        if (*sec > 60.0) {
+            *sec /= 60.0;
+            i++;
+            if (*sec > 24.0) {
+                *sec /= 24.0;
+                i++;
+            }
+        }
+    }
+    *si = pfix[i];
+}
+
+
+static void qagen_copy_show_time(LARGE_INTEGER t0, LARGE_INTEGER t1)
+{
+    LARGE_INTEGER freq;
+    const wchar_t *si;
+    double seconds;
+    QueryPerformanceFrequency(&freq);
+    seconds = ((double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart);
+    qagen_copy_format_time(&seconds, &si);
+    qagen_log_printf(QAGEN_LOG_INFO, L"Operation complete! Took %.1f %s", seconds, si);
+}
+
+
 /** @brief Computes the size of the dose beam list
  *  @details If the list contains DICOM files, it sums their individual sizes.
  *      If it contains MHD files, it multiplies the size of the RD template by
@@ -236,18 +280,17 @@ static int qagen_copy_rtplan(struct qagen_copy_ctx *ctx,
 static int qagen_copy_rtdose(struct qagen_copy_ctx *ctx,
                              struct qagen_patient  *pt)
 {
+    wchar_t rename[MAX_PATH];   /* Humongous fixed-size buffer? Yes please */
     const struct qagen_file *rd = pt->rtdose;
-    wchar_t *rename;
     int res = 0;
     for (; rd && !res; rd = rd->next) {
-        rename = qagen_string_createf(L"%d-%s", rd->data.rd.beamnum, rd->name);
-        if (!rename || qagen_path_join(&pt->basepath, rename)) {
+        swprintf(rename, BUFLEN(rename), L"%d-%s", rd->data.rd.beamnum, rd->name);
+        if (qagen_path_join(&pt->basepath, rename)) {
             return 1;
         }
         qagen_copy_set_filename(ctx, rd->name);
         res = qagen_copy_wrap(ctx, rd->path, pt->basepath->buf);
         qagen_path_remove_filespec(&pt->basepath);
-        qagen_free(rename); /* ugh */
     }
     return res;
 }
@@ -348,50 +391,6 @@ static int qagen_copy_dosebeams(struct qagen_copy_ctx *ctx,
 }
 
 
-/** @brief Formats time in nanoseconds to the most natural units
- *  @param[in,out] ns
- *      On input, time in seconds. On output, time in whatever units are placed
- *      in @p si
- *  @param[out] si
- *      Pointer to location that the unit string is stored to
- */
-static void qagen_copy_format_time(double *sec, const wchar_t **si)
-{
-    static const wchar_t *pfix[] = { L"ns", L"μs", L"ms", L"s", L"min", L"hr", L"day" };
-    unsigned i = 3;
-    if (*sec < 1e0) {
-        do {
-            *sec *= 1e3;
-            i--;
-        } while (i && *sec < 1e0);
-    } else if (*sec > 60) {
-        *sec /= 60;
-        i++;
-        if (*sec > 60) {
-            *sec /= 60;
-            i++;
-            if (*sec > 24) {
-                *sec /= 24;
-                i++;
-            }
-        }
-    }
-    *si = pfix[i];
-}
-
-
-static void qagen_copy_show_time(LARGE_INTEGER t0, LARGE_INTEGER t1)
-{
-    LARGE_INTEGER freq;
-    const wchar_t *si;
-    double seconds;
-    QueryPerformanceFrequency(&freq);
-    seconds = ((double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart);
-    qagen_copy_format_time(&seconds, &si);
-    qagen_log_printf(QAGEN_LOG_INFO, L"Operation complete! Took %.1f %s", seconds, si);
-}
-
-
 /** @brief Copies all relevant files to the patient directory
  *  @param ctx
  *      Copy context
@@ -459,14 +458,13 @@ DWORD qagen_copy_proc(LARGE_INTEGER totalsz, LARGE_INTEGER totalxfer,
     cctx->completed += diff;
     cctx->curcopy = totalxfer.QuadPart;
     qagen_copy_update(cctx);
-    if (cctx->opcancel) {
-        qagen_log_puts(QAGEN_LOG_INFO, L"Cancelling transfer");
-        return PROGRESS_CANCEL;
-    } else if (qagen_progdlg_cancelled(&cctx->pdlg)) {
+    if (cctx->opcancel || qagen_progdlg_cancelled(&cctx->pdlg)) {
         qagen_log_puts(QAGEN_LOG_INFO, L"Cancelling transfer");
         cctx->opcancel = TRUE;
         return PROGRESS_CANCEL;
     } else if (cctx->hide) {
+        /* Probably destroy the window here
+        I will have to be sure that the cleanup routines are still safe */
         return PROGRESS_QUIET;
     } else {
         return PROGRESS_CONTINUE;

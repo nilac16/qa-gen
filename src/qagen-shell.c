@@ -25,7 +25,7 @@
 static int qagen_search_rtplan_disambiguate(struct qagen_patient *pt)
 {
     struct qagen_rpwnd rpwnd = { 0 };
-    const wchar_t **strings;
+    wchar_t **strings;
     int nstrings, res = 1;
     nstrings = qagen_file_beam_strings(pt->rtplan, &strings);
     if (nstrings) {

@@ -77,6 +77,9 @@ private:
     void convert_grid_frame_offset_vector(DcmDataset *dset);
     void convert_geometry(DcmDataset *dset);
 
+    template <class DataT>
+    void write_grid_scaling(DcmDataset *dset, DataT dosegridscaling);
+
     /* This template is complete. *Do* note that more of this class will need
     to change in order to accomodate different raw data/output pixel formats.
     Ultimately, detection and handling of arbitrary formats cannot be done with

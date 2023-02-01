@@ -166,7 +166,7 @@ static void qagen_search_mc2_types(struct qagen_patient *pt,
         *state = MC2_SEARCH_FOUND_DICOM;
         qagen_file_list_free(pt->dose_beam);
         pt->dose_beam = head;
-        qagen_log_printf(QAGEN_LOG_INFO, L"Found %u DICOM Dose_Beams%s", len, PLFW(len));
+        qagen_log_printf(QAGEN_LOG_INFO, L"Found %u DICOM Dose_Beam%s", len, PLFW(len));
     } else {
         qagen_log_printf(QAGEN_LOG_WARN, L"Found %u DICOM Dose_Beam%s, expected %u", len, PLFW(len), xpected);
         qagen_ptr_nullify(&head, qagen_file_list_free);

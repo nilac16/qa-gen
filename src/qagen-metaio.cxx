@@ -216,6 +216,22 @@ void MHDConverter::convert_geometry(DcmDataset *dset)
     convert_grid_frame_offset_vector(dset);
 }
 
+
+template <class DataT>
+void MHDConverter::write_grid_scaling(DcmDataset *dset, DataT dosegridscaling)
+{
+    char buf[128];
+    OFCondition stat;
+    if (std::is_floating_point<DataT>::value) {
+        std::sprintf(buf, "%1.10e", dosegridscaling);
+    } else {
+        throw Exception(L"Unsupported input data type");
+    }
+    stat = dset->putAndInsertString(DCM_DoseGridScaling, buf);
+    Exception::ofcheck(stat, L"MHD conversion: Failed to update DoseGridScaling");
+}
+
+
 /* Microsoft pls, stop */
 #undef max
 
@@ -240,9 +256,7 @@ void MHDConverter::convert_pixels(DcmDataset *dset)
     const DataT dosegridscal = datamax(dptr, dptr + n) / (DataT)std::numeric_limits<PixelT>::max();
     PixelT *dest, *dstptr;
     OFCondition stat;
-    std::string buf = std::to_string(dosegridscal);
-    stat = dset->putAndInsertString(DCM_DoseGridScaling, buf.c_str());
-    Exception::ofcheck(stat, L"MHD conversion: Failed to update DoseGridScaling");
+    write_grid_scaling(dset, dosegridscal);
     dest = dstptr = new PixelT[n];
     /* Write each frame backwards */
     dptr += framelen;

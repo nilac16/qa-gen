@@ -217,16 +217,21 @@ void MHDConverter::convert_geometry(DcmDataset *dset)
 }
 
 
+/** @brief Writes @p dosegridscaling to dataset @p dset with the maximum
+ *      possible precision
+ *  @param dset
+ *      DICOM output dataset
+ *  @param dosegridscaling
+ *      The DoseGridScaling in the input data type, which must be a floating-
+ *      point type
+ */
 template <class DataT>
 void MHDConverter::write_grid_scaling(DcmDataset *dset, DataT dosegridscaling)
 {
-    char buf[128];
+    char buf[17];   /* DS has a 16-byte maximum */
     OFCondition stat;
-    if (std::is_floating_point<DataT>::value) {
-        std::sprintf(buf, "%1.10e", dosegridscaling);
-    } else {
-        throw Exception(L"Unsupported input data type");
-    }
+    static_assert(std::is_floating_point<DataT>::value);
+    std::sprintf(buf, "%1.10e", dosegridscaling);
     stat = dset->putAndInsertString(DCM_DoseGridScaling, buf);
     Exception::ofcheck(stat, L"MHD conversion: Failed to update DoseGridScaling");
 }

@@ -45,7 +45,7 @@ set_property(TARGET ${PROJECT_NAME}
     PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 
-add_executable(MHD2DCM mhd2dcm.c
+add_executable(mhd2dcm mhd2dcm.c
                ${CMAKE_SOURCE_DIR}/src/qagen-path.c
                ${CMAKE_SOURCE_DIR}/src/qagen-error.c
                ${CMAKE_SOURCE_DIR}/src/qagen-memory.c
@@ -53,10 +53,10 @@ add_executable(MHD2DCM mhd2dcm.c
                ${CMAKE_SOURCE_DIR}/src/qagen-log.c
                ${CMAKE_SOURCE_DIR}/src/qagen-metaio.cxx)
 
-target_link_libraries(MHD2DCM
+target_link_libraries(mhd2dcm
               PUBLIC  PathCch
               PRIVATE DCMTK::DCMTK
                       ${ITK_LIBRARIES})
 
-set_property(TARGET MHD2DCM
+set_property(TARGET mhd2dcm
     PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")

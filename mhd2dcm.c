@@ -7,9 +7,9 @@
 
 static void print_usage(void)
 {
-    fputws(L"Usage: MHD2DCM MHD TEMPLATE\n"
+    fputws(L"Usage: mhd2dcm MHD TEMPLATE\n"
            L"Convert MetaImage header file MHD to a DICOM RTDose file, using the tags in\n"
-           L"template file TEMPLATE\n", stdout);
+           L"DICOM file TEMPLATE as a basis\n", stdout);
 }
 
 
@@ -34,7 +34,7 @@ static int main_run(const wchar_t *src, PATH *dst, const wchar_t *tmplt)
 
 static int log_cb(const wchar_t *msg, void *data, qagen_loglvl_t lvl)
 {
-    static const wchar_t *progname = L"MHD2DCM";
+    static const wchar_t *progname = L"mhd2dcm";
     const wchar_t *prefix = L"Info";
     FILE *fp = stdout;
     switch (lvl) {
@@ -59,7 +59,9 @@ static int log_cb(const wchar_t *msg, void *data, qagen_loglvl_t lvl)
 int wmain(int argc, wchar_t *argv[])
 {
     int res = 0;
-    qagen_log_add(&(struct qagen_log){ .callback = log_cb, .cbdata = NULL, .threshold = QAGEN_LOG_DEBUG });
+    if (qagen_log_add(&(struct qagen_log){ .callback = log_cb, .cbdata = NULL, .threshold = QAGEN_LOG_INFO })) {
+        fputws(L"mhd2dcm: Error: Failed to add log file\n", stderr);
+    }
     if (argc < 3) {
         qagen_log_puts(QAGEN_LOG_ERROR, L"Missing required operand");
         print_usage();
@@ -69,9 +71,9 @@ int wmain(int argc, wchar_t *argv[])
         wchar_t *erctx, *ermsg;
         qagen_error_string(&erctx, &ermsg);
         if (ermsg[0]) {
-            fwprintf(stderr, L"MHD2DCM: Error: %s: %s", erctx, ermsg);
+            fwprintf(stderr, L"mhd2dcm: Error: %s: %s", erctx, ermsg);
         } else {
-            fwprintf(stderr, L"MHD2DCM: Error: %s", erctx);
+            fwprintf(stderr, L"mhd2dcm: Error: %s", erctx);
         }
     }
     qagen_log_cleanup();

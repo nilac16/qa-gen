@@ -22,6 +22,30 @@ static bool qagen_debug_stack_walk(HANDLE        process, HANDLE   thread,
 }
 
 
+/** @brief This takes up a lot of space */
+static void qagen_debug_stackframe_init(STACKFRAME64 *frame, const CONTEXT *ctx)
+{
+    frame->AddrPC.Offset = ctx->Rip;
+    frame->AddrPC.Mode = AddrModeFlat;
+    frame->AddrStack.Offset = ctx->Rsp;
+    frame->AddrStack.Mode = AddrModeFlat;
+    frame->AddrFrame.Offset = ctx->Rbp;
+    frame->AddrFrame.Mode = AddrModeFlat;
+}
+
+
+/** @brief  */
+static void qagen_debug_symfromaddr(HANDLE              process,
+                                    const DWORD64       address,
+                                    DWORD64            *disp,
+                                    SYMBOL_INFOW       *syminfo)
+{
+    if (!SymFromAddrW(process, address, disp, syminfo)) {
+        wcscpy(syminfo->Name, L"???");
+    }
+}
+
+
 int qagen_debug_print_stack(const CONTEXT *ectx)
 {
     static const wchar_t *fmtlnno = L"   #%d: %#x <%s> (line %d)";
@@ -30,7 +54,6 @@ int qagen_debug_print_stack(const CONTEXT *ectx)
     HANDLE thread = GetCurrentThread();
     IMAGEHLP_LINEW64 line = { 0 };
     STACKFRAME64 frame = { 0 };
-    DWORD64 disp = 0;
     CONTEXT record;
     BOOL res;
     int i = 0;
@@ -38,19 +61,12 @@ int qagen_debug_print_stack(const CONTEXT *ectx)
     SymInitializeW(process, NULL, TRUE);
     memset(syminfo, 0, sizeof *syminfo);
     memcpy(&record, ectx, sizeof record);
-    frame.AddrPC.Offset = ectx->Rip;
-    frame.AddrPC.Mode = AddrModeFlat;
-    frame.AddrStack.Offset = ectx->Rsp;
-    frame.AddrStack.Mode = AddrModeFlat;
-    frame.AddrFrame.Offset = ectx->Rbp;
-    frame.AddrFrame.Mode = AddrModeFlat;
+    syminfo->SizeOfStruct = sizeof *syminfo;
+    syminfo->MaxNameLen = MAX_SYM_NAME - 2;
+    line.SizeOfStruct = sizeof line;
+    qagen_debug_stackframe_init(&frame, ectx);
     while (qagen_debug_stack_walk(process, thread, &frame, &record)) {
-        syminfo->SizeOfStruct = sizeof *syminfo;
-        syminfo->MaxNameLen = MAX_SYM_NAME - 2;
-        line.SizeOfStruct = sizeof line;
-        if (!SymFromAddrW(process, frame.AddrPC.Offset, &disp, syminfo)) {
-            wcscpy(syminfo->Name, L"???");
-        }
+        qagen_debug_symfromaddr(process, frame.AddrPC.Offset, NULL, syminfo);
         res = SymGetLineFromAddrW64(process, frame.AddrPC.Offset, &(DWORD){ 0 }, &line);
         qagen_log_printf(QAGEN_LOG_DEBUG, (res) ? fmtlnno : fmtnoln,
                          i++, syminfo->Address, syminfo->Name, line.LineNumber);
@@ -177,17 +193,13 @@ int qagen_debug_memtable_lookup(const void *addr)
 static void qagen_memtable_extant_trace(USHORT n, void *frame[])
 {
     HANDLE process = GetCurrentProcess();
-    SYMBOL_INFOW *syminfo;
-    const size_t symsize = sizeof *syminfo + sizeof *syminfo->Name * MAX_SYM_NAME;
-    syminfo = _alloca(symsize);
-    memset(syminfo, 0, symsize);
+    SYMBOL_INFOW *syminfo = _alloca(sizeof *syminfo + sizeof *syminfo->Name * MAX_SYM_NAME);
     SymInitializeW(process, NULL, TRUE);
+    memset(syminfo, 0, sizeof *syminfo);
+    syminfo->MaxNameLen = MAX_SYM_NAME - 2;
+    syminfo->SizeOfStruct = sizeof *syminfo;
     for (USHORT i = 0; i < n; i++) {
-        syminfo->MaxNameLen = MAX_SYM_NAME - 2;
-        syminfo->SizeOfStruct = sizeof *syminfo;
-        if (!SymFromAddrW(process, (DWORD64)frame[i], 0, syminfo)) {
-            wcscpy(syminfo->Name, L"???");
-        }
+        qagen_debug_symfromaddr(process, (DWORD64)frame[i], NULL, syminfo);
         qagen_log_printf(QAGEN_LOG_DEBUG, L"   %#x <%s>", frame[i], syminfo->Name);
     }
 }

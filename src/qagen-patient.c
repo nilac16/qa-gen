@@ -82,7 +82,7 @@ static int qagen_patient_tokenize(struct qagen_patient *pt,
 {
     static const wchar_t *failctx = L"Could not parse folder name";
     static const wchar_t *failfmt = L"Found %zu %s, expected %zu";
-    static const wchar_t delim = '~';
+    static const wchar_t delim = L'~';
     wchar_t *r = wcschr(dpy, delim);
     size_t i = 0;
     while (r) {

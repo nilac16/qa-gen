@@ -3,7 +3,6 @@
 #include <DbgHelp.h>
 
 
-
 /** @brief A big old conditional expression that takes up too much space in its
  *      own scope
  */
@@ -34,7 +33,7 @@ static void qagen_debug_stackframe_init(STACKFRAME64 *frame, const CONTEXT *ctx)
 }
 
 
-/** @brief  */
+/** @brief This is reused */
 static void qagen_debug_symfromaddr(HANDLE              process,
                                     const DWORD64       address,
                                     DWORD64            *disp,
@@ -76,7 +75,7 @@ int qagen_debug_print_stack(const CONTEXT *ectx)
 
 
 #define MEM_TABLE_SIZE  389
-#define MEM_LOAD_CAP    256 /* Issue warnings if there are more allocs than this */
+#define MEM_LOAD_CAP    292 /* Issue warnings if there are more allocs than this */
 
 #define MEM_TRACE_LEN 4 /* The number of stack frames from the alloc site */
 

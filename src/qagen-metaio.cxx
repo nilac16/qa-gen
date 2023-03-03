@@ -231,7 +231,7 @@ void MHDConverter::write_grid_scaling(DcmDataset *dset, DataT dosegridscaling)
     char buf[17];   /* DS has a 16-byte maximum */
     OFCondition stat;
     static_assert(std::is_floating_point<DataT>::value);
-    std::sprintf(buf, "%1.10e", dosegridscaling);
+    std::sprintf(buf, "%1.10e", dosegridscaling);   /* Use _sprintf_l to guarantee that this is executed with the C locale */
     stat = dset->putAndInsertString(DCM_DoseGridScaling, buf);
     Exception::ofcheck(stat, L"MHD conversion: Failed to update DoseGridScaling");
 }
@@ -245,9 +245,7 @@ template <class DataT>
 DataT datamax(const DataT *d0, const DataT *const d1)
 {
     DataT res = (DataT)0;
-    for (; d0 < d1; d0++) {
-        res = std::max(res, *d0);
-    }
+    std::for_each(d0, d1, [&res](DataT x){ res = std::max(res, x); });
     return res;
 }
 

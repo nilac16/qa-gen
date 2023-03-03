@@ -1,5 +1,8 @@
 #pragma once
-
+/** @file Function for converting MetaImage files to RTDose files on disk
+ *  @todo Set the locale to the C locale during this operation, to guarantee
+ *      that all strings are written using the correct character repertoire
+ */
 #ifndef QAGEN_METAIO_H
 #define QAGEN_METAIO_H
 

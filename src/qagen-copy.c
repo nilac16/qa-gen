@@ -440,7 +440,7 @@ static void qagen_copy_update(struct qagen_copy_ctx *ctx)
 {
     wchar_t *si;
     int signif;
-    qagen_copy_format_bytes(ctx->total - ctx->completed, &si, &signif);
+    qagen_copy_format_bytes(ctx->total - ctx->completed, &si, &signif); /* Wait wtf I'm not even using this! */
     qagen_copy_set_message(ctx, false);
     if (qagen_copy_update_dlg(ctx)) {
         ctx->hide = TRUE;

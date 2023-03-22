@@ -23,7 +23,10 @@ typedef enum qagen_file_type {
     QAGEN_FILE_DCM_RP,
     QAGEN_FILE_DCM_RD,
     QAGEN_FILE_DCM_DOSEBEAM,
-    QAGEN_FILE_MHD_DOSEBEAM
+    QAGEN_FILE_MHD_DOSEBEAM,
+
+    QAGEN_FILE_OTHER    /* If this is set, the union has invalid data. The
+                        owning scope will need to know what this list contains */
 } qagen_file_t;
 
 
@@ -34,8 +37,8 @@ struct qagen_file {
         struct qagen_rtplan rp;
         struct qagen_rtdose rd;
     } data;
-    wchar_t name[MAX_PATH];
-    wchar_t path[];
+    wchar_t name[MAX_PATH]; /* Filename */
+    wchar_t path[];         /* Fully-qualified path */
 };
 
 

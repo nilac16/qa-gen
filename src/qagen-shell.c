@@ -423,7 +423,8 @@ static int qagen_search_folders(struct qagen_patient *pt,
 /** @brief Duplicates the RS path, jumps up two directories, then joins MC2 and
  *      <dpyname>~MC2
  *  @param rspath
- *      PATH to RS directory
+ *      PATH to RS directory. This can be NULL, in which case the result will
+ *      also be NULL
  *  @param dpyname
  *      Display name of the RS folder
  *  @returns Assumed PATH to the MC2 directory, or NULL on error
@@ -431,6 +432,21 @@ static int qagen_search_folders(struct qagen_patient *pt,
  *      function will not raise an error state
  */
 static PATH *qagen_shell_get_mc2path(const PATH *rspath, const wchar_t *dpyname)
+/** Don't do this yet. If the directory structure is the new structure, then
+ *  just change the MC2 path
+ *  Not the best, but also not really that big of a deal
+ */
+/* {
+    PATH *res = NULL;
+    if (rspath) {
+        res = qagen_path_duplicate(rspath);
+        if (res) {
+            qagen_path_remove_filespec(&res);
+            qagen_path_join(&res, L"MC2");
+        }
+    }
+    return res;
+} */
 {
     PATH *res = NULL;
     if (rspath) {
@@ -448,6 +464,100 @@ static PATH *qagen_shell_get_mc2path(const PATH *rspath, const wchar_t *dpyname)
             qagen_free(base);
         }
     }
+    return res;
+}
+
+
+/** @brief Searches @p jsonls for the expected JSON file. If it does not find
+ *      it, selects the first node in the list
+ *  @param pt
+ *      Patient context
+ *  @param jsonls
+ *      JSON list to search
+ */
+static void qagen_shell_select_json(struct qagen_patient    *pt,
+                                    const struct qagen_file *jsonls)
+{
+    static const wchar_t xpected[] = L"plan_QA.json";
+    const struct qagen_file *jptr = jsonls;
+    if (jptr) {
+        /* UGH, strncpy, GROSS */
+        wcsncpy(pt->jsonpath, jptr->path, BUFLEN(pt->jsonpath));
+        jptr = jptr->next;
+    }
+    for (; jptr; jptr = jptr->next) {
+        if (!wcscmp(jptr->name, xpected)) {
+            wcsncpy(pt->jsonpath, jptr->path, BUFLEN(pt->jsonpath));
+            break;
+        }
+    }
+}
+
+
+/** @brief Modifies @p mc2path if a JSON file was found
+ *  @param pt
+ *      Patient context
+ *  @param rspath
+ *      Selected RS path
+ *  @param mc2path
+ *      Tentative MC2 path
+ *  @returns Nonzero on error
+ */
+static int qagen_shell_confirm_mc2(const struct qagen_patient *pt,
+                                   const PATH                 *rspath,
+                                   PATH                      **mc2path)
+{
+    int res = 0;
+    if (pt->jsonpath[0]) {
+        qagen_log_puts(QAGEN_LOG_INFO, L"Found a patient JSON, using new directory structure");
+        qagen_path_free(*mc2path);
+        *mc2path = qagen_path_duplicate(rspath);
+        if (*mc2path) {
+            qagen_path_remove_filespec(mc2path);
+            res = qagen_path_join(mc2path, L"MC2");
+        } else {
+            res = 1;
+        }
+    } else {
+        qagen_log_puts(QAGEN_LOG_WARN, L"Did not find a JSON, using old directory structure");
+    }
+    return res;
+}
+
+
+/** @brief Looks for a JSON file in rspath\..~~, preferably one that matches
+ *      RS_JSON_FNAME~~
+ *  @param pt
+ *      Patient context. If the JSON is found, its jsonpath member will be set
+ *      to the JSON's fully qualified path
+ *  @param rspath
+ *      Path to the selected RS directory
+ *  @param mc2path
+ *      Path to MC2 directory. If a JSON is found, I assume that the new folder
+ *      structure is in place, and I have to modify the MC2 path
+ *  @returns Nonzero on error
+ */
+static int qagen_shell_find_json(struct qagen_patient *pt,
+                                 const PATH           *rspath,
+                                 PATH                **mc2path)
+{
+    static const wchar_t *wildcard = L"*.json"; /* Oh god I hope FindFirstFile is not case-sensitive */
+    PATH *root = qagen_path_duplicate(rspath);
+    struct qagen_file *jsonls;
+    int res = 0;
+    if (!root) {
+        return 1;
+    }
+    qagen_path_remove_filespec(&root);
+    jsonls = qagen_file_enumerate(QAGEN_FILE_OTHER, root, wildcard);
+    if (!jsonls && qagen_error_state()) {
+        res = 1;
+    } else {
+        qagen_shell_select_json(pt, jsonls);
+        res = qagen_shell_confirm_mc2(pt, rspath, mc2path);
+    }
+    qagen_file_list_free(jsonls);
+    qagen_path_free(root);
     return res;
 }
 
@@ -470,19 +580,22 @@ static PATH *qagen_shell_get_mc2path(const PATH *rspath, const wchar_t *dpyname)
 static int qagen_shell_init_patient(const wchar_t *rsstr, wchar_t *dpyname,
                                     DWORD          ptidx, DWORD    totalpts)
 {
-    struct qagen_patient pt = { 0 };
+    struct qagen_patient pt = { 0 };    /* REMEMBER THIS */
     PATH *rspath = qagen_path_create(rsstr);
     PATH *mc2path = qagen_shell_get_mc2path(rspath, dpyname);
     int res = 1;
     if (mc2path) {
-        res = qagen_patient_init(&pt, dpyname, ptidx, totalpts);
+        res = qagen_shell_find_json(&pt, rspath, &mc2path);
+        res = (res) ? res : qagen_patient_init(&pt, dpyname, ptidx, totalpts);
         if (!res) {
+            /* Stop logging strings with long paths in them you numbnut */
+            /* qagen_log_printf(QAGEN_LOG_DEBUG, L"Expecting MC2 path: %s", mc2path->buf); */
             res = qagen_search_folders(&pt, rspath, mc2path)
                || qagen_patient_create_qa(&pt)
                || qagen_copy_patient(&pt);
-            qagen_patient_cleanup(&pt);
         }
     }
+    qagen_patient_cleanup(&pt);
     qagen_path_free(mc2path);
     qagen_path_free(rspath);
     return res;

@@ -1,8 +1,12 @@
+/** It appears that I just didn't feel like commenting the static functions in
+ *  this file in a meaningful way...
+ */
 #include <assert.h>
 #include <setjmp.h>
 #include <stdio.h>
 #include "qagen-json.h"
 #include "qagen-error.h"
+#include "qagen-string.h"
 #include "qagen-memory.h"
 #include "qagen-log.h"
 #include <json-c/json.h>
@@ -236,6 +240,301 @@ int qagen_json_write(const struct qagen_patient *pt, const wchar_t *filename)
         }
     } else {
         qagen_log_puts(QAGEN_LOG_ERROR, L"Attempt to build JSON failed");
+    }
+    return res;
+}
+
+
+/** @brief Gets the size of the file with HANDLE @p hfile
+ *  @param hfile
+ *      File HANDLE
+ *  @param len
+ *      Length of mapping
+ *  @returns @p hfile on success. On failure, closes @p hfile and returns
+ *      INVALID_HANDLE_VALUE
+ */
+static HANDLE qagen_json_handle_len(HANDLE hfile, size_t *len)
+{
+    static const wchar_t *failmsg = L"Failed to get JSON file length";
+    LARGE_INTEGER buf;
+    if (GetFileSizeEx(hfile, &buf)) {
+        *len = buf.QuadPart;
+    } else {
+        qagen_error_raise(QAGEN_ERR_WIN32, NULL, failmsg);
+        CloseHandle(hfile);
+        hfile = INVALID_HANDLE_VALUE;
+    }
+    return hfile;
+}
+
+
+/** @brief Opens a HANDLE to the file, for later _read calls
+ *  @param filename
+ *      Path to file
+ *  @param len
+ *      On success, the length of the file is written here. May NOT be NULL
+ *  @returns A HANDLE to the opened file, or INVALID_HANDLE_VALUE on error
+ */
+static HANDLE qagen_json_get_handle(const wchar_t *filename, size_t *len)
+{
+    static const wchar_t *failmsg = L"Failed to open JSON file";
+    HANDLE res;
+    res = CreateFile(filename,
+                     GENERIC_READ,
+                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                     NULL,
+                     OPEN_EXISTING,
+                     FILE_ATTRIBUTE_NORMAL,
+                     NULL);
+    if (res == INVALID_HANDLE_VALUE) {
+        qagen_error_raise(QAGEN_ERR_WIN32, NULL, failmsg);
+    } else {
+        res = qagen_json_handle_len(res, len);
+    }
+    return res;
+}
+
+
+/** @brief Loads the data contained by file at @p filename into a byte buffer
+ *  @param filename
+ *      Path to file
+ *  @returns A pointer to a buffer containing a *copy* of the contents of the
+ *      file, or NULL on error
+ */
+static char *qagen_json_load_file(const wchar_t *filename)
+{
+    static const wchar_t *failmsg = L"Failed to read JSON contents";
+    char *res = NULL;
+    HANDLE hfile;
+    size_t len;
+    hfile = qagen_json_get_handle(filename, &len);
+    if (hfile != INVALID_HANDLE_VALUE) {
+        res = qagen_malloc(sizeof *res * len);
+        if (res) {
+            if (!ReadFile(hfile, res, (DWORD)len, &(DWORD){ 0 }, NULL)) {
+                qagen_error_raise(QAGEN_ERR_WIN32, NULL, failmsg);
+                qagen_ptr_nullify(&res, qagen_free);
+            }
+        }
+        CloseHandle(hfile);
+    }
+    return res;
+}
+
+
+/** @brief Reads isocenter information
+ *  @param pt
+ *      Patient context, destination
+ *  @param val
+ *      Isocenter array
+ *  @returns Nonzero on error
+ */
+static int qagen_json_dfs_load_iso(struct qagen_patient *pt,
+                                   json_object          *val)
+{
+    json_object *elem;
+    size_t i, n;
+    if (json_object_get_type(val) != json_type_array) {
+        /* Not stored properly */
+        qagen_error_raise(QAGEN_ERR_RUNTIME, L"Cannot read isocenter information from JSON", L"Iso is not formatted as an array (%d)", json_object_get_type(val));
+        return 1;
+    }
+    n = json_object_array_length(val);
+    if (n != 3) {
+        /* Malformed iso */
+        qagen_error_raise(QAGEN_ERR_RUNTIME, L"Cannot read isocenter information from JSON", L"Expected 3 components, found %zu", n);
+        return 1;
+    }
+    for (i = 0; i < 3; i++) {
+        elem = json_object_array_get_idx(val, i);
+        pt->iso[i] = json_object_get_double(elem);
+        if (errno) {
+            qagen_error_raise(QAGEN_ERR_SYSTEM, NULL, L"Cannot read iso component");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+/** @brief Loads the key specified by @p kyidx and @p val into the patient info
+ *  @param pt
+ *      Patient context
+ *  @param kyidx
+ *      Key index
+ *  @param val
+ *      JSON value for this key
+ *  @returns Nonzero on error
+ */
+static int qagen_json_dfs_load_key(struct qagen_patient *pt,
+                                   unsigned              kyidx,
+                                   json_object          *val)
+{
+    const char *vstring;
+    switch (kyidx) {
+    case PT_TOK_ISO:
+        /* Special handling */
+        return qagen_json_dfs_load_iso(pt, val);
+    default:
+        /* Copy the token to backing store and assign the token index */
+        vstring = json_object_get_string(val);
+        pt->tokstore[kyidx] = qagen_string_utf16cvt(vstring);
+        if (!pt->tokstore[kyidx]) {
+            return 1;
+        }
+        pt->tokens[kyidx] = pt->tokstore[kyidx];
+        break;
+    }
+    return 0;
+}
+
+
+/** @brief Swaps the values at @p x and @p y */
+static void intxchg(unsigned *restrict x, unsigned *restrict y)
+{
+    unsigned tmp = *x;
+    *x = *y;
+    *y = tmp;
+}
+
+
+/** @brief Check the provided key-value pair for inclusion in the remaining
+ *      required patient keys
+ *  @param pt
+ *      Patient context
+ *  @param remky
+ *      Remaining key indices
+ *  @param remct
+ *      Remaining key count
+ *  @param key
+ *      Test key
+ *  @param val
+ *      Test value
+ *  @returns Nonzero on error
+ */
+static int qagen_json_dfs_keycheck(struct qagen_patient *pt,
+                                   unsigned              remky[],
+                                   unsigned    *restrict remct,
+                                   const char           *key,
+                                   json_object          *val)
+{
+    unsigned i, keyidx;
+    for (i = 0; i < *remct; i++) {
+        keyidx = remky[i];
+        if (!strcmp(key, pt_keys[keyidx])) {
+            if (qagen_json_dfs_load_key(pt, keyidx, val)) {
+                return 1;
+            }
+            *remct -= 1;
+            intxchg(&remky[i], &remky[*remct]);
+            break;
+        }
+    }
+    return 0;
+}
+
+
+/** @brief DFS on the JSON tree and read the first instance of each key that we
+ *      are searching for
+ *  @param pt
+ *      Patient context
+ *  @param node
+ *      Subtree root
+ *  @param remky
+ *      Remaining key indices
+ *  @param remct
+ *      Count of remaining key indices
+ *  @returns Nonzero on error
+ */
+static int qagen_json_dfs(struct qagen_patient *pt, 
+                          json_object          *node,
+                          unsigned              remky[],
+                          unsigned    *restrict remct)
+{
+    int itercnt = 0;
+    int res = 0;
+    unsigned i, n;
+    if (!node || json_object_get_type(node) != json_type_object) {
+        /* Discard nodes that are not objects? */
+        return 0;
+    }
+    qagen_log_puts(QAGEN_LOG_DEBUG, L"Beginning new loop...");
+    json_object_object_foreach(node, key, val) {
+        switch (json_object_get_type(val)) {
+        case json_type_array:
+            n = json_object_array_length(val);
+            for (i = 0; i < n && !res; i++) {
+                /* segfault immediately after call */
+                res = qagen_json_dfs(pt, json_object_array_get_idx(val, i), remky, remct);
+            }
+            break;
+        case json_type_object:
+            res = qagen_json_dfs(pt, val, remky, remct);
+            break;
+        default:
+            res = qagen_json_dfs_keycheck(pt, remky, remct, key, val);
+        }
+        qagen_log_printf(QAGEN_LOG_DEBUG, L"%d iterations", ++itercnt);
+        if (res) {
+            break;
+        }
+    }
+    qagen_log_puts(QAGEN_LOG_DEBUG, L"Loop ended!");
+    return res;
+}
+
+
+/** @brief Searches for patient keys in the JSON tree rooted at @p root
+ *  @param pt
+ *      Patient context, destination
+ *  @param root
+ *      Root of JSON tree
+ *  @returns Nonzero on error
+ */
+static int qagen_json_load(struct qagen_patient *pt, json_object *root)
+/** wOW i have nO iDeA how to look up keys with json-c...
+ *  I hate to do this (unless I'm supposed to), but I guess I'm just gonna DFS
+ *  and search for the set of missing keys
+ */
+{
+    /* Index map to the patient keys. As keys are found, swap them with the end
+    and decrement the counter */
+    unsigned rem[] = { 0, 1, 2, 3, 4, 5 }, count = BUFLEN(rem);
+    if (qagen_json_dfs(pt, root, rem, &count)) {
+        return 1;
+    } else if (count) {
+        wchar_t ctx[256];
+        swprintf(ctx, BUFLEN(ctx), L"JSON is missing %u required keys", count);
+        qagen_error_raise(QAGEN_ERR_RUNTIME, ctx, L"First missing key is %S", pt_keys[rem[0]]);
+    }
+    return count != 0;
+}
+
+
+int qagen_json_read(struct qagen_patient *pt, const wchar_t *filename)
+{
+    char *jbuf = qagen_json_load_file(filename);
+    enum json_tokener_error jerr;
+    json_object *root;
+    int res = 1;
+    if (jbuf) {
+        root = json_tokener_parse_verbose(jbuf, &jerr);
+        if (root) {
+            res = qagen_json_load(pt, root);
+            json_object_put(root);
+        } else {
+            qagen_error_raise(QAGEN_ERR_RUNTIME, L"Could not parse JSON file", L"%S", json_tokener_error_desc(jerr));
+        }
+        qagen_free(jbuf);
+    }
+    if (!res) {
+        qagen_log_printf(QAGEN_LOG_DEBUG, L"NAME: %s %s", pt->tokens[PT_TOK_FNAME], pt->tokens[PT_TOK_LNAME]);
+        qagen_log_printf(QAGEN_LOG_DEBUG, L"MRN:  %s", pt->tokens[PT_TOK_MRN]);
+        qagen_log_printf(QAGEN_LOG_DEBUG, L"PLAN: %s", pt->tokens[PT_TOK_PLAN]);
+        qagen_log_printf(QAGEN_LOG_DEBUG, L"BEAM: %s", pt->tokens[PT_TOK_BEAMSET]);
+        qagen_log_printf(QAGEN_LOG_DEBUG, L"ISO:  (% .2f,% .2f,% .2f)", pt->iso[0], pt->iso[1], pt->iso[2]);
+        qagen_error_raise(QAGEN_ERR_RUNTIME, L"No problem here", L"Everything works!");
+        res = 1;
     }
     return res;
 }

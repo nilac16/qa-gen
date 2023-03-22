@@ -194,8 +194,18 @@ int qagen_patient_init(struct qagen_patient *pt,    wchar_t *dpyname,
 {
     pt->pt_idx = ptidx;
     pt->pt_tot = pttotal;
-    if (qagen_patient_tokenize(pt, dpyname)
-     || qagen_patient_generate_foldername(pt)) {
+    if (pt->jsonpath[0]) {
+        if (qagen_json_read(pt, pt->jsonpath)) {
+            return 1;
+        }
+    } else {
+        if (qagen_patient_tokenize(pt, dpyname)) {
+            return 1;
+        }
+    }
+    /* if (qagen_patient_tokenize(pt, dpyname)
+     || */
+    if (qagen_patient_generate_foldername(pt)) {
         return 1;
     } else {
         qagen_log_printf(QAGEN_LOG_INFO, L"Selected patient %s, %s", pt->tokens[PT_TOK_LNAME], pt->tokens[PT_TOK_FNAME]);
@@ -206,11 +216,15 @@ int qagen_patient_init(struct qagen_patient *pt,    wchar_t *dpyname,
 
 void qagen_patient_cleanup(struct qagen_patient *pt)
 {
+    unsigned i;
     qagen_file_list_free(pt->rtplan);
     qagen_file_list_free(pt->rtdose);
     qagen_file_list_free(pt->dose_beam);
     qagen_file_list_free(pt->rd_template);
     qagen_path_free(pt->basepath);
+    for (i = 0; i < BUFLEN(pt->tokstore); i++) {
+        qagen_freezero(pt->tokstore[i]);
+    }
     SecureZeroMemory(pt, sizeof *pt);
 }
 

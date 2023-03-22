@@ -79,3 +79,9 @@ int qagen_string_concatf(wchar_t       *restrict *dst,
         return 1;
     }
 }
+
+
+wchar_t *qagen_string_utf16cvt(const char *utf8)
+{
+    return qagen_string_createf(L"%S", utf8);
+}

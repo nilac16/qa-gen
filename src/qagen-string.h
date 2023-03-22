@@ -48,4 +48,14 @@ int qagen_string_concatf(wchar_t       *restrict *dst,
                          ...);
 
 
+/** @brief Mallocs a UTF-16 copy of input string @p utf8
+ *  @param utf8
+ *      UTF-8 input string to be copied
+ *  @returns A heap-allocated UTF-16 copy of @p utf8
+ *  @note This just jumps to qagen_string_createf with L"%S" as its format
+ *      string
+ */
+wchar_t *qagen_string_utf16cvt(const char *utf8);
+
+
 #endif /* QAGEN_STRING_H */

@@ -79,8 +79,9 @@ void qagen_error_string(const wchar_t **ctx, const wchar_t **msg);
 
 /** @brief Returns true if this thread's error indicator is set
  *  @returns true if the error state is not QAGEN_ERROR_NONE, false otherwise
- *  @todo *Minimize* the amount of calls to this. There are better ways of
- *      differentiating error state than thread-locals, it's 2023 ffs
+ *  @warning The error state does not keep itself internally consistent. If an
+ *      error is raised, and you want to ignore it, *CLEAR IT*! If you do not,
+ *      this call becomes useless
  */
 bool qagen_error_state(void);
 

@@ -384,9 +384,11 @@ static int qagen_search_mc2_folder(struct qagen_patient *pt,
         case MC2_SEARCH_ERROR:
             return 1;
         case MC2_SEARCH_FOUND_NONE:
-            /* Just delete the dose_beam list, can't convert without template */
             qagen_log_puts(QAGEN_LOG_WARN, L"Found MHD files, but no RD template");
-            qagen_ptr_nullify(&pt->dose_beam, qagen_file_list_free);
+            /* If we can't find a template, this is OK: Just use an RD file */
+            /* qagen_ptr_nullify(&pt->dose_beam, qagen_file_list_free); */
+            /* Remember, don't copy the RD pointer here or you will break your
+            aliasing assertions */
             /* FALLTHRU */
         default:
             return 0;

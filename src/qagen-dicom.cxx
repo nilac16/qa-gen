@@ -4,6 +4,7 @@
 #include "qagen-dicom.h"
 #include "qagen-memory.h"
 #include "qagen-error.h"
+#include "qagen-log.h"
 
 #define INVALID_BEAM_NUMBER -1
 
@@ -157,7 +158,31 @@ void RPReader::alloc_beams(void)
 }
 
 
+/** @brief Convert @p src to its UTF-16 representation, copying at most @p n
+ *      wide characters
+ *  @note This function accepts a NULL pointer for @p src, in which case it
+ *      writes a single L'\0' to @p dst
+ *  @param dst
+ *      Destination buffer
+ *  @param src
+ *      Source string
+ *  @param n
+ *      Maximum number of wide characters that can be contained in @p dst
+ *  @returns Nothing, you weren't checking the error state anyway :p
+ */
+static void null_mbstowcs(wchar_t dst[], const char *src, size_t n)
+{
+    static const char nulterm = '\0';
+    src = (src) ? src : &nulterm;
+    std::mbstowcs(dst, src, n);
+}
+
+
 void RPReader::read_single_beam(DcmItem *seqitem, std::uint32_t i)
+/** OK, changing folders around has revealed a bug
+ *  If (no value) is available for a string tag, DCMTK makes the string pointer
+ *  NULL. (why??? just point it at '\0')
+ */
 {
     static const wchar_t *failfmt = L"RTPlan is missing %s for beam %u";
     OFCondition stat;
@@ -166,15 +191,15 @@ void RPReader::read_single_beam(DcmItem *seqitem, std::uint32_t i)
 
     stat = seqitem->findAndGetString(DCM_TreatmentMachineName, str);
     Exception::ofcheck(stat, failfmt, L"TreatmentMachineName", i);
-    std::mbstowcs(m_rp->beam[i].machine, str, BUFLEN(m_rp->beam[i].machine));
+    null_mbstowcs(m_rp->beam[i].machine, str, BUFLEN(m_rp->beam[i].machine));
 
     stat = seqitem->findAndGetString(DCM_BeamName, str);
     Exception::ofcheck(stat, failfmt, L"BeamName", i);
-    std::mbstowcs(m_rp->beam[i].name, str, BUFLEN(m_rp->beam[i].name));
+    null_mbstowcs(m_rp->beam[i].name, str, BUFLEN(m_rp->beam[i].name));
 
     stat = seqitem->findAndGetString(DCM_BeamDescription, str);
     Exception::ofcheck(stat, failfmt, L"BeamDescription", i);
-    std::mbstowcs(m_rp->beam[i].desc, str, BUFLEN(m_rp->beam[i].desc));
+    null_mbstowcs(m_rp->beam[i].desc, str, BUFLEN(m_rp->beam[i].desc));
 
     stat = seqitem->findAndGetFloat64(DCM_FinalCumulativeMetersetWeight, dub);
     Exception::ofcheck(stat, failfmt, L"FinalCumulativeMetersetWeight", i);
@@ -185,7 +210,14 @@ void RPReader::read_single_beam(DcmItem *seqitem, std::uint32_t i)
 
     stat = seqitem->findAndGetString(DCM_RangeShifterID, str);
     Exception::ofcheck(stat, failfmt, L"RangeShifterID", i);
-    m_rp->beam[i].rs_id = static_cast<std::int8_t>(std::atoi(str));
+    if (!str) {
+        /* No range shifter. Is this code path even reachable? */
+        /* Issue an error message. This would be a rare occurrence, and I don't
+        really feel like specializing the Exception constructor for this alone */
+        qagen_log_puts(QAGEN_LOG_ERROR, L"Range shifter value is missing!");
+    } else {
+        m_rp->beam[i].rs_id = static_cast<std::int8_t>(std::atoi(str));
+    }
 }
 
 

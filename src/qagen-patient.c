@@ -290,12 +290,46 @@ static int qagen_patient_create_dir(struct qagen_patient *pt)
 }
 
 
+/** @brief Determines whether the JSON file needs to be written or copied, and
+ *      acts accordingly
+ *  @param pt
+ *      Patient context
+ *  @param dst
+ *      Destination filename
+ *  @returns Nonzero on error
+ */
+static int qagen_patient_write_json(const struct qagen_patient *pt,
+                                    const wchar_t              *dst)
+{
+    if (pt->jsonpath[0]) {
+        /* Copy */
+        if (!CopyFile(pt->jsonpath, dst, FALSE)) {
+            /* Don't terminate, just issue a warning */
+            wchar_t buf[256];
+            FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
+                          NULL,
+                          GetLastError(),
+                          LANG_USER_DEFAULT,
+                          buf,
+                          BUFLEN(buf),
+                          NULL);
+            qagen_log_printf(QAGEN_LOG_WARN, L"Failed to copy JSON: %#x: %s", GetLastError(), buf);
+        }
+        return 0;   /* omfg this was missing the whole time and Visual C didn't
+                    emit any warnings or ANYTHING */
+    } else {
+        return qagen_json_write(pt, dst);
+    }
+}
+
+
 static int qagen_patient_create_json(struct qagen_patient *pt)
 {
-    static const wchar_t *fname = L"patient.json";
+    /* static const wchar_t *fname = L"patient.json"; */
+    static const wchar_t *fname = L"plan_QA.json";
     int res = 1;
     if (!qagen_path_join(&pt->basepath, fname)) {
-        res = qagen_json_write(pt, pt->basepath->buf);
+        res = qagen_patient_write_json(pt, pt->basepath->buf);
         qagen_path_remove_filespec(&pt->basepath);
     }
     if (!res) {

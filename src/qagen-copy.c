@@ -100,9 +100,11 @@ static ULONGLONG qagen_copy_dosebeam_size(struct qagen_copy_ctx      *ctx,
         if (pt->dose_beam->type == QAGEN_FILE_DCM_DOSEBEAM) {
             res = qagen_file_list_totalsize(pt->dose_beam);
         } else {
-            ctx->templatesz = qagen_file_list_totalsize(pt->rd_template);
+            /* ctx->templatesz = qagen_file_list_totalsize(pt->rd_template);
             dblen = qagen_file_list_len(pt->dose_beam);
-            res = ctx->templatesz * dblen;
+            res = ctx->templatesz * dblen; */
+            /* Ugh, just take the total size of all RD files I guess */
+            res = qagen_file_list_totalsize(pt->rtdose);
         }
     }
     return res;
@@ -327,7 +329,7 @@ static int qagen_copy_mhd_dosebeams(struct qagen_copy_ctx *ctx,
                                     struct qagen_patient  *pt)
 {
     const struct qagen_file *mhd = pt->dose_beam;
-    const wchar_t *const template = pt->rd_template->path;
+    const wchar_t *const template = (pt->rd_template) ? pt->rd_template->path : pt->rtdose->path;
     int res = 0;
     for (; mhd && !res; mhd = mhd->next) {
         if (qagen_path_join(&pt->basepath, mhd->name)) {

@@ -24,7 +24,8 @@ static const char *pt_keys[] = {
     "last_name",
     "first_name",
     "plan_name",
-    "beamset"
+    "beamset",
+    PT_KEY_ISO
 };
 
 
@@ -46,7 +47,7 @@ static const char *field_keys[] = {
     "meterset"
 };
 
-static_assert(BUFLEN(pt_keys) == PT_TOK_ISO, "Mismatched patient keys");
+//static_assert(BUFLEN(pt_keys) == PT_TOK_ISO, "Mismatched patient keys");
 static_assert(BUFLEN(field_keys) == PT_N_FLD_TAGS, "Mismatched field keys");
 
 
@@ -336,7 +337,7 @@ static int qagen_json_dfs_load_iso(struct qagen_patient *pt,
     size_t i, n;
     if (json_object_get_type(val) != json_type_array) {
         /* Not stored properly */
-        qagen_error_raise(QAGEN_ERR_RUNTIME, L"Cannot read isocenter information from JSON", L"Iso is not formatted as an array (%d)", json_object_get_type(val));
+        qagen_error_raise(QAGEN_ERR_RUNTIME, L"Cannot read isocenter information from JSON", L"Iso is not formatted as an array (%S)", json_object_get_string(val));
         return 1;
     }
     n = json_object_array_length(val);
@@ -451,35 +452,40 @@ static int qagen_json_dfs(struct qagen_patient *pt,
                           unsigned              remky[],
                           unsigned    *restrict remct)
 {
-    int itercnt = 0;
+    /* int itercnt = 0; */
+    /* unsigned i, n; */
     int res = 0;
-    unsigned i, n;
     if (!node || json_object_get_type(node) != json_type_object) {
         /* Discard nodes that are not objects? */
         return 0;
     }
-    qagen_log_puts(QAGEN_LOG_DEBUG, L"Beginning new loop...");
     json_object_object_foreach(node, key, val) {
         switch (json_object_get_type(val)) {
-        case json_type_array:
+        /* omg im such a hack wtf */
+        /* case json_type_array:
             n = json_object_array_length(val);
             for (i = 0; i < n && !res; i++) {
-                /* segfault immediately after call */
-                res = qagen_json_dfs(pt, json_object_array_get_idx(val, i), remky, remct);
+                val = json_object_array_get_idx(val, i);
+                switch (json_object_get_type(val)) {
+                case json_type_object:
+                    res = qagen_json_dfs(pt, val, remky, remct);
+                    break;
+                default:
+                    res = qagen_json_dfs_keycheck(pt, remky, remct, key, val);
+                    break;
+                }
             }
-            break;
+            break; */
         case json_type_object:
             res = qagen_json_dfs(pt, val, remky, remct);
             break;
         default:
             res = qagen_json_dfs_keycheck(pt, remky, remct, key, val);
         }
-        qagen_log_printf(QAGEN_LOG_DEBUG, L"%d iterations", ++itercnt);
         if (res) {
             break;
         }
     }
-    qagen_log_puts(QAGEN_LOG_DEBUG, L"Loop ended!");
     return res;
 }
 
@@ -526,15 +532,6 @@ int qagen_json_read(struct qagen_patient *pt, const wchar_t *filename)
             qagen_error_raise(QAGEN_ERR_RUNTIME, L"Could not parse JSON file", L"%S", json_tokener_error_desc(jerr));
         }
         qagen_free(jbuf);
-    }
-    if (!res) {
-        qagen_log_printf(QAGEN_LOG_DEBUG, L"NAME: %s %s", pt->tokens[PT_TOK_FNAME], pt->tokens[PT_TOK_LNAME]);
-        qagen_log_printf(QAGEN_LOG_DEBUG, L"MRN:  %s", pt->tokens[PT_TOK_MRN]);
-        qagen_log_printf(QAGEN_LOG_DEBUG, L"PLAN: %s", pt->tokens[PT_TOK_PLAN]);
-        qagen_log_printf(QAGEN_LOG_DEBUG, L"BEAM: %s", pt->tokens[PT_TOK_BEAMSET]);
-        qagen_log_printf(QAGEN_LOG_DEBUG, L"ISO:  (% .2f,% .2f,% .2f)", pt->iso[0], pt->iso[1], pt->iso[2]);
-        qagen_error_raise(QAGEN_ERR_RUNTIME, L"No problem here", L"Everything works!");
-        res = 1;
     }
     return res;
 }

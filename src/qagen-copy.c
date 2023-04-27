@@ -105,6 +105,8 @@ static ULONGLONG qagen_copy_dosebeam_size(struct qagen_copy_ctx      *ctx,
             res = ctx->templatesz * dblen; */
             /* Ugh, just take the total size of all RD files I guess */
             res = qagen_file_list_totalsize(pt->rtdose);
+            dblen = qagen_file_list_len(pt->rtdose);
+            ctx->templatesz = res / dblen;
         }
     }
     return res;

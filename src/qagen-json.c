@@ -348,6 +348,7 @@ static int qagen_json_dfs_load_iso(struct qagen_patient *pt,
     }
     for (i = 0; i < 3; i++) {
         elem = json_object_array_get_idx(val, i);
+        errno = 0;
         pt->iso[i] = json_object_get_double(elem);
         if (errno) {
             qagen_error_raise(QAGEN_ERR_SYSTEM, NULL, L"Cannot read iso component");
@@ -498,9 +499,8 @@ static int qagen_json_dfs(struct qagen_patient *pt,
  *  @returns Nonzero on error
  */
 static int qagen_json_load(struct qagen_patient *pt, json_object *root)
-/** wOW i have nO iDeA how to look up keys with json-c...
- *  I hate to do this (unless I'm supposed to), but I guess I'm just gonna DFS
- *  and search for the set of missing keys
+/** Not sure what the idiom is for key lookup using JSON-C, but I'm just gonna
+ *  DFS to find them
  */
 {
     /* Index map to the patient keys. As keys are found, swap them with the end
@@ -517,6 +517,64 @@ static int qagen_json_load(struct qagen_patient *pt, json_object *root)
 }
 
 
+/** @brief DFS from @p root, searching for a node with key @p key
+ *  @param root
+ *      Root node of JSON tree
+ *  @param key
+ *      Key to look up
+ *  @returns A pointer to the relevant node, or NULL if not found
+ */
+static json_object *qagen_json_dfs_single(json_object *root, const char *key)
+/* this is kinda gross */
+{
+    json_object *res = NULL;
+    json_object_object_foreach(root, k, v) {    /* Yeah that won't be confusing later */
+        if (json_object_get_type(v) == json_type_object) {
+            res = qagen_json_dfs_single(v, key);
+        } else {
+            if (!strcmp(k, key)) {
+                res = v;
+            }
+        }
+        if (res) {
+            break;
+        }
+    }
+    return res;
+}
+
+
+/** @brief Search for optional keys
+ *  @param pt
+ *      Patient context
+ *  @param root
+ *      JSON root node
+ *  @returns Nonzero on error? I don't believe anything can really go wrong
+ *      here. pls check it anyway tho
+ */
+static int qagen_json_opt(struct qagen_patient *pt, json_object *root)
+/** After all that work fetching every key in the same DFS, now you're just
+ *  being LAZY
+ */
+{
+    static const char *rxdoseky = "total_rx_dose_cgy";
+    static const char *nfracky = "number_of_fractions";
+    json_object *doseval, *nfracval;
+    doseval = qagen_json_dfs_single(root, rxdoseky);
+    nfracval = qagen_json_dfs_single(root, nfracky);
+    if (doseval && nfracval) {
+        errno = 0;
+        pt->rxdose_cgy = json_object_get_double(doseval);
+        pt->nfrac = json_object_get_int(nfracval);
+        if (!errno) {
+            pt->hasrx = true;
+            qagen_log_printf(QAGEN_LOG_DEBUG, L"Found Rx information: %.2f Gy in %u fractions", pt->rxdose_cgy / 100.0, pt->nfrac);
+        }
+    }
+    return 0;
+}
+
+
 int qagen_json_read(struct qagen_patient *pt, const wchar_t *filename)
 {
     char *jbuf = qagen_json_load_file(filename);
@@ -526,7 +584,8 @@ int qagen_json_read(struct qagen_patient *pt, const wchar_t *filename)
     if (jbuf) {
         root = json_tokener_parse_verbose(jbuf, &jerr);
         if (root) {
-            res = qagen_json_load(pt, root);
+            res = qagen_json_load(pt, root)
+               || qagen_json_opt(pt, root);
             json_object_put(root);
         } else {
             qagen_error_raise(QAGEN_ERR_RUNTIME, L"Could not parse JSON file", L"%S", json_tokener_error_desc(jerr));

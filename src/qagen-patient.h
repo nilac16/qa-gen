@@ -48,6 +48,10 @@ struct qagen_patient {
     struct qagen_file *rtdose;
     struct qagen_file *dose_beam;   /* Could be DICOM or MHD files */
     struct qagen_file *rd_template;
+
+    bool hasrx;
+    double rxdose_cgy;
+    DWORD  nfrac;
 };
 
 

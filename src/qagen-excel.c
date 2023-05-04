@@ -1,7 +1,9 @@
 /** This file is rapidly becoming the same disaster as the plotting code in 
  *  the shift app
  * 
- *  Hardcoding state machines is kind of difficult
+ *  If you are reading this, and you didn't write this, TURN BACK
+ * 
+ *  This file has already become an archaeological mystery, even to myself
  */
 #include <inttypes.h>
 #include <math.h>
@@ -92,12 +94,23 @@ struct rpt_vec {
     lxw_col_t col;
 };
 
+/** @brief Set @p vec to (r, c)
+ *  @param vec
+ *      Vector
+ *  @param r
+ *      Row index
+ *  @param c
+ *      Colum index
+ */
 static void rpt_vec_cell(struct rpt_vec *vec, lxw_row_t r, lxw_col_t c)
 {
     vec->row = r;
     vec->col = c;
 }
 
+/** @brief Sets the first and second elements of @p vec to the domain
+ *      [r1, r2] x [c1, c2]
+ */
 static void rpt_vec_range(struct rpt_vec vec[], lxw_row_t r1, lxw_col_t c1, lxw_row_t r2, lxw_col_t c2)
 {
     rpt_vec_cell(vec + 0, r1, c1);
@@ -447,11 +460,19 @@ static void qagen_excel_draw_pt_info_direct(const struct qagen_patient   *pt,
     worksheet_merge_range(sheet, row + 2, 6, row + 2, 7, utf8buf, flbl);
 
     rpt_vec_cell(&rpt->pt.loc.dose, row + 4, 2);
-    worksheet_write_blank(sheet, row + 4, 2, flbl);
+    if (pt->hasrx) {
+        worksheet_write_number(sheet, row + 4, 2, pt->rxdose_cgy / 100.0, flbl);
+    } else {
+        worksheet_write_blank(sheet, row + 4, 2, flbl);
+    }
     worksheet_conditional_format_cell(sheet, row + 4, 2, rxlbl);
 
     rpt_vec_cell(&rpt->pt.loc.nfx, row + 4, 4);
-    worksheet_write_blank(sheet, row + 4, 4, flbl);
+    if (pt->hasrx) {
+        worksheet_write_number(sheet, row + 4, 4, (double)pt->nfrac, flbl);
+    } else {
+        worksheet_write_blank(sheet, row + 4, 4, flbl);
+    }
     worksheet_conditional_format_cell(sheet, row + 4, 4, rxlbl);
 }
 
@@ -485,6 +506,12 @@ static void qagen_excel_draw_pt_info(const struct qagen_patient *pt,
     worksheet_set_row(sheet, rstart + 2, ROW_LONG, NULL);
     worksheet_set_row(sheet, rstart + 3, ROW_SHORT, NULL);
     worksheet_set_row(sheet, rstart + 4, ROW_LONG, NULL);
+    /* Have to do this first, otherwise the Gy/fx formula will not update */
+    if (scpy) {
+        qagen_excel_draw_pt_info_copied(rpt, sheet, rstart, rpt->pt.fldlbl);
+    } else {
+        qagen_excel_draw_pt_info_direct(pt, rpt, sheet, rstart, rpt->pt.fldlbl);
+    }
     /* Construct segment */
     worksheet_merge_range(sheet, rstart + 0, 0, rstart + 0, 1, FLD_PTNAME, rpt->pt.lptlbl);
     worksheet_write_string(sheet, rstart + 0, 5, FLD_PTMRN, rpt->pt.ptlbl);
@@ -497,11 +524,6 @@ static void qagen_excel_draw_pt_info(const struct qagen_patient *pt,
     worksheet_write_string(sheet, rstart + 4, 5, FLD_RX2, rpt->pt.smlbl);
     worksheet_write_formula(sheet, rstart + 4, 6, FLD_RXFMLA, rpt->pt.mufx);
     worksheet_write_string(sheet, rstart + 4, 7, FLD_RX3, rpt->pt.smlbl);
-    if (scpy) {
-        qagen_excel_draw_pt_info_copied(rpt, sheet, rstart, rpt->pt.fldlbl);
-    } else {
-        qagen_excel_draw_pt_info_direct(pt, rpt, sheet, rstart, rpt->pt.fldlbl);
-    }
     qagen_excel_draw_pt_border(rpt, sheet, rstart);
 }
 

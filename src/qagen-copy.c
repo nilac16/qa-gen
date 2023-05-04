@@ -107,6 +107,7 @@ static ULONGLONG qagen_copy_dosebeam_size(struct qagen_copy_ctx      *ctx,
             res = qagen_file_list_totalsize(pt->rtdose);
             dblen = qagen_file_list_len(pt->rtdose);
             ctx->templatesz = res / dblen;
+            qagen_log_printf(QAGEN_LOG_DEBUG, L"Computed template size: %u", ctx->templatesz);
         }
     }
     return res;

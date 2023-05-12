@@ -334,7 +334,7 @@ static int qagen_copy_mhd_dosebeams(struct qagen_copy_ctx *ctx,
     const struct qagen_file *mhd = pt->dose_beam;
     const wchar_t *const template = (pt->rd_template) ? pt->rd_template->path : pt->rtdose->path;
     int res = 0;
-    for (; mhd && !res; mhd = mhd->next) {
+    for (; mhd && !res && !qagen_progdlg_cancelled(&ctx->pdlg); mhd = mhd->next) {
         if (qagen_path_join(&pt->basepath, mhd->name)) {
             return 1;
         }

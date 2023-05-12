@@ -28,7 +28,9 @@ struct qagen_patient {
                                     tokens' memory. I cannot do so with the
                                     JSON unless I leave it open...
                                     TL;DR these need to be freed, and kept NULL
-                                    if they are not being used */
+                                    if they are not being used. "Used" means
+                                    a backing store for the below pointers,
+                                    which are to be used for all processing */
     wchar_t *tokens[PT_N_TOKENS];   /* These tokens are created from the
                                     display name string, which itself is
                                     created/managed by the ShellItem */

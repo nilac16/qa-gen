@@ -85,3 +85,14 @@ wchar_t *qagen_string_utf16cvt(const char *utf8)
 {
     return qagen_string_createf(L"%S", utf8);
 }
+
+
+bool qagen_string_isempty(const wchar_t *s)
+{
+    bool res = true;
+    while (*s && res) {
+        res = iswspace(*s);
+        s++;
+    }
+    return res;
+}

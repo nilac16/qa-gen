@@ -58,4 +58,12 @@ int qagen_string_concatf(wchar_t       *restrict *dst,
 wchar_t *qagen_string_utf16cvt(const char *utf8);
 
 
+/** @brief Determines if @p s is either empty or contains only whitespace
+ *  @param s
+ *      String
+ *  @returns true if @p s is only whitespace or empty, false otherwise
+ */
+bool qagen_string_isempty(const wchar_t *s);
+
+
 #endif /* QAGEN_STRING_H */

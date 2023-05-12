@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include "qagen-patient.h"
+#include "qagen-string.h"
 #include "qagen-json.h"
 #include "qagen-excel.h"
 #include "qagen-memory.h"
@@ -189,6 +190,53 @@ static int qagen_patient_generate_foldername(struct qagen_patient *pt)
 }
 
 
+/** @brief Split @p full into a first name and last name. Splits on whitespace
+ *      and underscores, and uses the LAST instance of either
+ *  @note Ad hoc helper function
+ *  @param full
+ *      Pointer to full name string, i.e. <full> ::= <last> <delim> <first>
+ *  @returns A pointer to the new *FIRST* name, or NULL if no splitting was
+ *      possible. Note that this could be a pointer to the nul term if the
+ *      string ends with a delimiter
+ */
+static wchar_t *qagen_patient_splice_name(wchar_t *full)
+{
+    wchar_t *inst = NULL;
+    for (; *full; full++) {
+        if (iswspace(*full) || *full == L'_') {
+            inst = full;
+        }
+    }
+    if (inst) {
+        *inst++ = L'\0';
+    }
+    return inst;
+}
+
+
+/** @brief Half-ass validates information read from a JSON file
+ *  @param pt
+ *      Patient context
+ */
+static void qagen_patient_validate_postjson(struct qagen_patient *pt)
+/** If the first_name field is empty, find it from the last_name field by
+ *  partitioning on the last instance of a space or underscore
+ */
+{
+    wchar_t *nptr;
+    if (qagen_string_isempty(pt->tokens[PT_TOK_FNAME])) {
+        qagen_log_puts(QAGEN_LOG_WARN, L"Patient's first name string is empty");
+        nptr = qagen_patient_splice_name(pt->tokens[PT_TOK_LNAME]);
+        if (nptr) {
+            pt->tokens[PT_TOK_FNAME] = nptr;
+            qagen_log_printf(QAGEN_LOG_INFO, L"Spliced name into %s, %s", pt->tokens[PT_TOK_LNAME], pt->tokens[PT_TOK_FNAME]);
+        } else {
+            qagen_log_puts(QAGEN_LOG_ERROR, L"Could not splice a first name!");
+        }
+    }
+}
+
+
 int qagen_patient_init(struct qagen_patient *pt,    wchar_t *dpyname,
                        DWORD                 ptidx, DWORD    pttotal)
 {
@@ -198,6 +246,8 @@ int qagen_patient_init(struct qagen_patient *pt,    wchar_t *dpyname,
         if (qagen_json_read(pt, pt->jsonpath)) {
             return 1;
         }
+        /* validate the json, it is often exported incorrectly */
+        qagen_patient_validate_postjson(pt);
     } else {
         if (qagen_patient_tokenize(pt, dpyname)) {
             return 1;

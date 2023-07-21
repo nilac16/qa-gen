@@ -6,6 +6,7 @@
 int qagen_console_init(struct qagen_console *cons)
 {
     static const wchar_t *failmsg = L"Failed to fetch console output handle";
+
     AllocConsole(); /* This call is redundant now that I no longer use WinMain */
     cons->hcons = GetStdHandle(STD_OUTPUT_HANDLE);
     if (cons->hcons != INVALID_HANDLE_VALUE) {
@@ -32,6 +33,7 @@ static WORD qagen_console_color(qagen_loglvl_t lvl)
         FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY,
         FOREGROUND_RED | FOREGROUND_INTENSITY
     };
+
     return color[lvl];
 }
 
@@ -45,6 +47,7 @@ static const wchar_t *qagen_console_lvlprefix(qagen_loglvl_t lvl)
         L"Warning",
         L"Error"
     };
+
     return prefix[lvl];
 }
 
@@ -57,6 +60,7 @@ static int qagen_console_write(const wchar_t *restrict msg,
     static const wchar_t *msgfmt = L"QAGen: %s: %s\n";
     wchar_t buf[256];
     DWORD nchars, nwrit;
+
     nchars = swprintf(buf, BUFLEN(buf), msgfmt, qagen_console_lvlprefix(lvl), msg);
     if (nchars >= 0) {
         WriteConsole(cons->hcons, buf, nchars, &nwrit, NULL);
@@ -71,6 +75,7 @@ int qagen_console_callback(const wchar_t *restrict msg,
 {
     CONSOLE_SCREEN_BUFFER_INFO info;
     int res;
+
     if (GetConsoleScreenBufferInfo(cons->hcons, &info)) {
         SetConsoleTextAttribute(cons->hcons, qagen_console_color(lvl));
         res = qagen_console_write(msg, cons, lvl);

@@ -57,7 +57,9 @@ static json_object *qagen_json_wstring_node(const wchar_t *str, jmp_buf env)
     static const wchar_t *failfmt = L"Failed to convert \"%s\" to UTF-8";
     char cvt[512];
     json_object *res = NULL;
-    size_t out = wcstombs(cvt, str, BUFLEN(cvt));
+    size_t out;
+
+    out = wcstombs(cvt, str, BUFLEN(cvt));
     if (out == (size_t)-1) {
         /* qagen_error_raise(QAGEN_ERR_SYSTEM, &(const int){ EILSEQ }, failfmt, str); */
         qagen_log_puts(QAGEN_LOG_ERROR, L"Illegal sequence encountered while encoding JSON node");
@@ -77,7 +79,9 @@ static json_object *qagen_json_wstring_node(const wchar_t *str, jmp_buf env)
 /** @brief Only returns if it succeeds */
 static json_object *qagen_json_double_node(double x, jmp_buf env)
 {
-    json_object *res = json_object_new_double(x);
+    json_object *res;
+
+    res = json_object_new_double(x);
     if (!res) {
         qagen_log_printf(QAGEN_LOG_ERROR, L"Failed to create JSON node containing %f", x);
         longjmp(env, 1);
@@ -88,7 +92,9 @@ static json_object *qagen_json_double_node(double x, jmp_buf env)
 
 static json_object *qagen_json_rangeshifter_node(int rsid, jmp_buf env)
 {
-    json_object *res = json_object_new_int(rsid);
+    json_object *res;
+
+    res = json_object_new_int(rsid);
     if (!res) {
         qagen_log_puts(QAGEN_LOG_ERROR, L"Failed to create JSON node for range shifter ID");
         longjmp(env, 1);
@@ -111,7 +117,9 @@ static int qagen_json_meterset_serializer(json_object     *jso,
 
 static json_object *qagen_json_meterset_node(double x, jmp_buf env)
 {
-    json_object *res = qagen_json_double_node(x, env);
+    json_object *res;
+
+    res = qagen_json_double_node(x, env);
     json_object_set_serializer(res, qagen_json_meterset_serializer, NULL, NULL);
     return res;
 }
@@ -123,7 +131,9 @@ static void qagen_json_make_tokens(const struct qagen_patient *pt,
                                    jmp_buf                     env)
 {
     json_object *node;
-    for (uint32_t i = 0; i < PT_TOK_ISO; i++) {
+    uint32_t i;
+
+    for (i = 0; i < PT_TOK_ISO; i++) {
         node = qagen_json_wstring_node(pt->tokens[i], env);
         if (json_object_object_add(root, pt_keys[i], node) < 0) {
             qagen_log_printf(QAGEN_LOG_ERROR, L"Failed adding token node %u", i);
@@ -138,7 +148,9 @@ static void qagen_json_make_iso(const struct qagen_patient *pt,
                                 json_object                *root,
                                 jmp_buf                     env)
 {
-    json_object *arr = json_object_new_array();
+    json_object *arr;
+
+    arr = json_object_new_array();
     if (arr) {
         json_object_array_add(arr, qagen_json_double_node(pt->iso[0], env));
         json_object_array_add(arr, qagen_json_double_node(pt->iso[1], env));
@@ -158,7 +170,9 @@ static void qagen_json_make_iso(const struct qagen_patient *pt,
 static json_object *qagen_json_single_field(const struct qagen_rtbeam *beam,
                                             jmp_buf                    env)
 {
-    json_object *root = json_object_new_object();
+    json_object *root;
+
+    root = json_object_new_object();
     if (root) {
         if (!json_object_object_add(root, field_keys[PT_FLD_TXMACHINE], qagen_json_wstring_node(beam->machine, env))
          && !json_object_object_add(root, field_keys[PT_FLD_BEAMNAME], qagen_json_wstring_node(beam->name, env))
@@ -181,11 +195,14 @@ static void qagen_json_make_fields(const struct qagen_patient *pt,
                                    json_object                *root,
                                    jmp_buf                     env)
 {
-    const uint32_t n = qagen_patient_num_beams(pt);
-    json_object *arr = json_object_new_array();
     const struct qagen_rtbeam *beam;
+    json_object *arr;
+    uint32_t n, i;
+
+    n = qagen_patient_num_beams(pt);
+    arr = json_object_new_array();
     if (arr) {
-        for (uint32_t i = 0; i < n; i++) {
+        for (i = 0; i < n; i++) {
             beam = &pt->rtplan->data.rp.beam[i];
             json_object_array_add(arr, qagen_json_single_field(beam, env));
         }
@@ -204,8 +221,10 @@ static void qagen_json_make_fields(const struct qagen_patient *pt,
 /** @brief setjmp happens here */
 static json_object *qagen_json_make(const struct qagen_patient *pt)
 {
-    json_object *root = json_object_new_object();
+    json_object *root;
     jmp_buf env;
+
+    root = json_object_new_object();
     if (root) {
         if (setjmp(env)) {
             qagen_ptr_nullify(&root, json_object_put);
@@ -225,9 +244,11 @@ int qagen_json_write(const struct qagen_patient *pt, const wchar_t *filename)
 {
     static const wchar_t *failmsg = L"Failed to open JSON file for writing";
     const int jflags = JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_SPACED;
-    json_object *root = qagen_json_make(pt);
-    FILE *fp;
     int res = 0;
+    json_object *root;
+    FILE *fp;
+
+    root = qagen_json_make(pt);
     if (root) {
         fp = _wfopen(filename, L"w");
         if (fp) {
@@ -258,6 +279,7 @@ static HANDLE qagen_json_handle_len(HANDLE hfile, size_t *len)
 {
     static const wchar_t *failmsg = L"Failed to get JSON file length";
     LARGE_INTEGER buf;
+
     if (GetFileSizeEx(hfile, &buf)) {
         *len = buf.QuadPart;
     } else {
@@ -280,6 +302,7 @@ static HANDLE qagen_json_get_handle(const wchar_t *filename, size_t *len)
 {
     static const wchar_t *failmsg = L"Failed to open JSON file";
     HANDLE res;
+
     res = CreateFile(filename,
                      GENERIC_READ,
                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -308,6 +331,7 @@ static char *qagen_json_load_file(const wchar_t *filename)
     char *res = NULL;
     HANDLE hfile;
     size_t len;
+
     hfile = qagen_json_get_handle(filename, &len);
     if (hfile != INVALID_HANDLE_VALUE) {
         res = qagen_malloc(sizeof *res * len);
@@ -335,6 +359,7 @@ static int qagen_json_dfs_load_iso(struct qagen_patient *pt,
 {
     json_object *elem;
     size_t i, n;
+
     if (json_object_get_type(val) != json_type_array) {
         /* Not stored properly */
         qagen_error_raise(QAGEN_ERR_RUNTIME, L"Cannot read isocenter information from JSON", L"Iso is not formatted as an array (%S)", json_object_get_string(val));
@@ -373,6 +398,7 @@ static int qagen_json_dfs_load_key(struct qagen_patient *pt,
                                    json_object          *val)
 {
     const char *vstring;
+
     switch (kyidx) {
     case PT_TOK_ISO:
         /* Special handling */
@@ -395,6 +421,7 @@ static int qagen_json_dfs_load_key(struct qagen_patient *pt,
 static void intxchg(unsigned *restrict x, unsigned *restrict y)
 {
     unsigned tmp = *x;
+
     *x = *y;
     *y = tmp;
 }
@@ -421,6 +448,7 @@ static int qagen_json_dfs_keycheck(struct qagen_patient *pt,
                                    json_object          *val)
 {
     unsigned i, keyidx;
+
     for (i = 0; i < *remct; i++) {
         keyidx = remky[i];
         if (!strcmp(key, pt_keys[keyidx])) {
@@ -448,7 +476,7 @@ static int qagen_json_dfs_keycheck(struct qagen_patient *pt,
  *      Count of remaining key indices
  *  @returns Nonzero on error
  */
-static int qagen_json_dfs(struct qagen_patient *pt, 
+static int qagen_json_dfs(struct qagen_patient *pt,
                           json_object          *node,
                           unsigned              remky[],
                           unsigned    *restrict remct)
@@ -456,6 +484,7 @@ static int qagen_json_dfs(struct qagen_patient *pt,
     /* int itercnt = 0; */
     /* unsigned i, n; */
     int res = 0;
+
     if (!node || json_object_get_type(node) != json_type_object) {
         /* Discard nodes that are not objects? */
         return 0;
@@ -506,10 +535,11 @@ static int qagen_json_load(struct qagen_patient *pt, json_object *root)
     /* Index map to the patient keys. As keys are found, swap them with the end
     and decrement the counter */
     unsigned rem[] = { 0, 1, 2, 3, 4, 5 }, count = BUFLEN(rem);
+    wchar_t ctx[256];
+
     if (qagen_json_dfs(pt, root, rem, &count)) {
         return 1;
     } else if (count) {
-        wchar_t ctx[256];
         swprintf(ctx, BUFLEN(ctx), L"JSON is missing %u required keys", count);
         qagen_error_raise(QAGEN_ERR_RUNTIME, ctx, L"First missing key is %S", pt_keys[rem[0]]);
     }
@@ -528,6 +558,7 @@ static json_object *qagen_json_dfs_single(json_object *root, const char *key)
 /* this is kinda gross */
 {
     json_object *res = NULL;
+
     json_object_object_foreach(root, k, v) {    /* Yeah that won't be confusing later */
         if (json_object_get_type(v) == json_type_object) {
             res = qagen_json_dfs_single(v, key);
@@ -560,6 +591,7 @@ static int qagen_json_opt(struct qagen_patient *pt, json_object *root)
     static const char *rxdoseky = "total_rx_dose_cgy";
     static const char *nfracky = "number_of_fractions";
     json_object *doseval, *nfracval;
+
     doseval = qagen_json_dfs_single(root, rxdoseky);
     nfracval = qagen_json_dfs_single(root, nfracky);
     if (doseval && nfracval) {
@@ -577,10 +609,12 @@ static int qagen_json_opt(struct qagen_patient *pt, json_object *root)
 
 int qagen_json_read(struct qagen_patient *pt, const wchar_t *filename)
 {
-    char *jbuf = qagen_json_load_file(filename);
-    enum json_tokener_error jerr;
     json_object *root;
+    char *jbuf;
+    enum json_tokener_error jerr;
     int res = 1;
+
+    jbuf = qagen_json_load_file(filename);
     if (jbuf) {
         root = json_tokener_parse_verbose(jbuf, &jerr);
         if (root) {

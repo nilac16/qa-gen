@@ -15,7 +15,9 @@
 void *qagen_malloc(size_t size)
 {
     static const wchar_t *failfmt = L"Failed to allocate block of size %zu";
-    void *res = malloc(size);
+    void *res;
+
+    res = malloc(size);
     if (!res && size) {
         qagen_error_raise(QAGEN_ERR_SYSTEM, NULL, failfmt, size);
     } else if (res) {
@@ -28,7 +30,9 @@ void *qagen_malloc(size_t size)
 void *qagen_calloc(size_t nmemb, size_t size)
 {
     static const wchar_t *failfmt = L"Failed to allocate %zu elements of %zu bytes";
-    void *res = calloc(nmemb, size);
+    void *res;
+
+    res = calloc(nmemb, size);
     if (!res && size && nmemb) {
         qagen_error_raise(QAGEN_ERR_SYSTEM, NULL, failfmt, nmemb, size);
     } else if (res) {
@@ -41,7 +45,9 @@ void *qagen_calloc(size_t nmemb, size_t size)
 void *qagen_realloc(void *addr, size_t size)
 {
     static const wchar_t *failfmt = L"Failed to reallocate block to size %zu";
-    void *res = realloc(addr, size);
+    void *res;
+
+    res = realloc(addr, size);
     if (!res && size) {
         qagen_error_raise(QAGEN_ERR_SYSTEM, NULL, failfmt, size);
     } else {

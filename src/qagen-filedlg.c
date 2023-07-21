@@ -5,11 +5,13 @@
 static int qagen_filedlg_create_instance(struct qagen_filedlg *fdlg)
 {
     static const wchar_t *failmsg = L"Failed to create instance of FileOpenDialog";
-    HRESULT hr = CoCreateInstance(&CLSID_FileOpenDialog,
-                                  NULL,
-                                  CLSCTX_INPROC_SERVER,
-                                  &IID_IFileOpenDialog,
-                                  &fdlg->fd);
+    HRESULT hr;
+
+    hr = CoCreateInstance(&CLSID_FileOpenDialog,
+                          NULL,
+                          CLSCTX_INPROC_SERVER,
+                          &IID_IFileOpenDialog,
+                          &fdlg->fd);
     if (FAILED(hr)) {
         qagen_error_raise(QAGEN_ERR_HRESULT, &hr, failmsg);
     }
@@ -21,7 +23,9 @@ static int qagen_filedlg_set_title(struct qagen_filedlg *fdlg)
 {
     static const wchar_t *failfmt = L"Failed to set FileDialog %s";
     static const wchar_t *title = L"Select patient RS directories";
-    HRESULT hr = fdlg->fd->lpVtbl->SetTitle(fdlg->fd, title);
+    HRESULT hr;
+
+    hr = fdlg->fd->lpVtbl->SetTitle(fdlg->fd, title);
     if (FAILED(hr)) {
         qagen_error_raise(QAGEN_ERR_HRESULT, &hr, failfmt, L"title");
     }
@@ -33,7 +37,9 @@ static int qagen_filedlg_set_options(struct qagen_filedlg *fdlg)
 {
     static const wchar_t *failfmt = L"Failed to set FileDialog %s";
     const FILEOPENDIALOGOPTIONS opt = FOS_PICKFOLDERS | FOS_ALLOWMULTISELECT;
-    HRESULT hr = fdlg->fd->lpVtbl->SetOptions(fdlg->fd, opt);
+    HRESULT hr;
+
+    hr = fdlg->fd->lpVtbl->SetOptions(fdlg->fd, opt);
     if (FAILED(hr)) {
         qagen_error_raise(QAGEN_ERR_HRESULT, &hr, failfmt, L"options");
     }
@@ -56,7 +62,9 @@ static int qagen_filedlg_init(struct qagen_filedlg *dlg)
 static int qagen_filedlg_get_results(struct qagen_filedlg *dlg)
 {
     static const wchar_t *failmsg = L"Failed to get FileDialog results";
-    HRESULT hr = dlg->fd->lpVtbl->GetResults(dlg->fd, &dlg->siarr);
+    HRESULT hr;
+
+    hr = dlg->fd->lpVtbl->GetResults(dlg->fd, &dlg->siarr);
     if (SUCCEEDED(hr)) {
         hr = dlg->siarr->lpVtbl->GetCount(dlg->siarr, &dlg->count);
         if (SUCCEEDED(hr)) {
@@ -73,7 +81,9 @@ static int qagen_filedlg_get_results(struct qagen_filedlg *dlg)
 
 static int qagen_filedlg_wait(struct qagen_filedlg *dlg)
 {
-    HRESULT hr = dlg->fd->lpVtbl->Show(dlg->fd, NULL);
+    HRESULT hr;
+
+    hr = dlg->fd->lpVtbl->Show(dlg->fd, NULL);
     if (SUCCEEDED(hr)) {
         return qagen_filedlg_get_results(dlg);
     } else {
@@ -84,7 +94,9 @@ static int qagen_filedlg_wait(struct qagen_filedlg *dlg)
 
 int qagen_filedlg_show(struct qagen_filedlg *fdlg)
 {
-    int res = qagen_filedlg_init(fdlg);
+    int res;
+
+    res = qagen_filedlg_init(fdlg);
     if (!res) {
         res = qagen_filedlg_wait(fdlg);
     }
@@ -112,6 +124,7 @@ static int qagen_filedlg_get_sigdn(IShellItem           *si,
 {
     static const wchar_t *failmsg = L"Failed to get path string from ShellItem";
     HRESULT hr;
+
     hr = si->lpVtbl->GetDisplayName(si, sigdn, dst);
     if (FAILED(hr)) {
         qagen_error_raise(QAGEN_ERR_HRESULT, &hr, failmsg);
@@ -127,6 +140,7 @@ int qagen_filedlg_path(struct qagen_filedlg *fdlg,
 {
     static const wchar_t *failfmt = L"Failed to get path index %lu from FileDialog";
     HRESULT hr;
+
     if (fdlg->si) {
         fdlg->si->lpVtbl->Release(fdlg->si);
     }

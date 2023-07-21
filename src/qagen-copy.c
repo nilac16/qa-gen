@@ -29,6 +29,7 @@ static void qagen_copy_format_bytes(LONGLONG        bytes,
 {
     static const wchar_t *si[] = { L"B", L"kB", L"MB", L"GB", L"TB", L"PB" };
     unsigned i = 0;
+
     while (bytes >= 10000) {
         bytes /= 1000;
         i++;
@@ -49,6 +50,7 @@ static void qagen_copy_format_time(double *sec, const wchar_t **si)
 {
     static const wchar_t *pfix[] = { L"ns", L"μs", L"ms", L"s", L"min", L"hr", L"day" };
     unsigned i = 3;
+
     if (*sec < 1e0) {
         do {
             *sec *= 1e3;
@@ -75,6 +77,7 @@ static void qagen_copy_show_time(LARGE_INTEGER t0, LARGE_INTEGER t1)
     LARGE_INTEGER freq;
     const wchar_t *si;
     double seconds;
+
     QueryPerformanceFrequency(&freq);
     seconds = ((double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart);
     qagen_copy_format_time(&seconds, &si);
@@ -94,8 +97,9 @@ static void qagen_copy_show_time(LARGE_INTEGER t0, LARGE_INTEGER t1)
 static ULONGLONG qagen_copy_dosebeam_size(struct qagen_copy_ctx      *ctx,
                                           const struct qagen_patient *pt)
 {
-    uint32_t dblen;
     ULONGLONG res = 0;
+    uint32_t dblen;
+
     if (pt->dose_beam) {
         if (pt->dose_beam->type == QAGEN_FILE_DCM_DOSEBEAM) {
             res = qagen_file_list_totalsize(pt->dose_beam);
@@ -183,6 +187,7 @@ static int qagen_copy_prepare(struct qagen_copy_ctx      *ctx,
 {
     const wchar_t *si;
     int signif;
+
     if (qagen_copy_compute_total(ctx, pt)
      || qagen_copy_compute_nfiles(ctx, pt)
      || qagen_copy_write_title(ctx, pt)) {
@@ -209,9 +214,11 @@ static int qagen_copy_wrap(struct qagen_copy_ctx *ctx,
                            const wchar_t         *dest)
 {
     static const wchar_t *failmsg = L"Failed to copy file";
+    DWORD lasterr;
+
     ctx->curcopy = 0;
     if (!CopyFileEx(exist, dest, qagen_copy_proc, ctx, &ctx->opcancel, 0)) {
-        DWORD lasterr = GetLastError();
+        lasterr = GetLastError();
         if (lasterr != ERROR_REQUEST_ABORTED) {
             qagen_error_raise(QAGEN_ERR_WIN32, &lasterr, failmsg);
         }
@@ -234,6 +241,7 @@ static void qagen_copy_set_message(struct qagen_copy_ctx *ctx,
 {
     const wchar_t *si, *op = (ismhd) ? L"Converting" : L"Copying";
     int signif;
+
     qagen_copy_format_bytes(ctx->total - ctx->completed, &si, &signif);
     swprintf(ctx->line1, BUFLEN(ctx->line1),
              L"%s file %d of %d (%d %s remaining)",
@@ -265,6 +273,7 @@ static int qagen_copy_rtplan(struct qagen_copy_ctx *ctx,
                              struct qagen_patient  *pt)
 {
     int res;
+
     if (qagen_path_join(&pt->basepath, pt->rtplan->name)) {
         return 1;
     }
@@ -288,6 +297,7 @@ static int qagen_copy_rtdose(struct qagen_copy_ctx *ctx,
     wchar_t rename[MAX_PATH];   /* Humongous fixed-size buffer? Yes please */
     const struct qagen_file *rd = pt->rtdose;
     int res = 0;
+
     for (; rd && !res; rd = rd->next) {
         swprintf(rename, BUFLEN(rename), L"%d-%s", rd->data.rd.beamnum, rd->name);
         if (qagen_path_join(&pt->basepath, rename)) {
@@ -334,6 +344,7 @@ static int qagen_copy_mhd_dosebeams(struct qagen_copy_ctx *ctx,
     const struct qagen_file *mhd = pt->dose_beam;
     const wchar_t *const template = (pt->rd_template) ? pt->rd_template->path : pt->rtdose->path;
     int res = 0;
+
     for (; mhd && !res && !qagen_progdlg_cancelled(&ctx->pdlg); mhd = mhd->next) {
         if (qagen_path_join(&pt->basepath, mhd->name)) {
             return 1;
@@ -363,6 +374,7 @@ static int qagen_copy_dcm_dosebeams(struct qagen_copy_ctx *ctx,
 {
     const struct qagen_file *db = pt->dose_beam;
     int res = 0;
+
     for (; db && !res; db = db->next) {
         if (qagen_path_join(&pt->basepath, db->name)) {
             return 1;
@@ -409,6 +421,7 @@ static int qagen_copy_files(struct qagen_copy_ctx *ctx,
 {
     LARGE_INTEGER t0, t1;
     int res;
+
     if (qagen_progdlg_show(&ctx->pdlg, ctx->title)) {
         return 1;
     }
@@ -428,6 +441,7 @@ static int qagen_copy_files(struct qagen_copy_ctx *ctx,
 int qagen_copy_patient(struct qagen_patient *pt)
 {
     struct qagen_copy_ctx ctx = { 0 };
+
     return qagen_copy_prepare(&ctx, pt)
         || qagen_copy_files(&ctx, pt);
 }
@@ -445,6 +459,7 @@ static void qagen_copy_update(struct qagen_copy_ctx *ctx)
 {
     wchar_t *si;
     int signif;
+
     qagen_copy_format_bytes(ctx->total - ctx->completed, &si, &signif); /* Wait wtf I'm not even using this! */
     qagen_copy_set_message(ctx, false);
     if (qagen_copy_update_dlg(ctx)) {
@@ -460,6 +475,7 @@ DWORD qagen_copy_proc(LARGE_INTEGER totalsz, LARGE_INTEGER totalxfer,
                       struct qagen_copy_ctx *cctx)
 {
     LONGLONG diff = totalxfer.QuadPart - cctx->curcopy;
+
     cctx->completed += diff;
     cctx->curcopy = totalxfer.QuadPart;
     qagen_copy_update(cctx);

@@ -5,6 +5,10 @@
  * 
  *  This file has already become an archaeological mystery, even to myself
  */
+
+/** I am NOT picking through this file to unmix declarations and code. How did I
+ *  ever rationalize to myself that initializing with a function was OK?
+ */
 #include <inttypes.h>
 #include <math.h>
 #include <limits.h>

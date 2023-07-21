@@ -11,7 +11,7 @@
 
 /** @brief Jumps to the first non-whitespace character in @p nptr. If @p nptr
  *      is empty or contains only whitespace, this will return a pointer to the
- *      null term  
+ *      null term
  *  @param nptr
  *      Pointer to string to the stripped of leading whitespace
  *  @returns @p nptr stripped of leading whitespace, as determined by
@@ -46,6 +46,7 @@ static int qagen_patient_parse_dub(const wchar_t **str,
                                    double         *dub)
 {
     wchar_t *endptr;
+
     if (**str != lead) {
         return 1;
     } else {
@@ -65,7 +66,9 @@ static int qagen_patient_parse_iso(struct qagen_patient *pt)
 {
     static const wchar_t *failctx = L"Could not parse isocenter string";
     static const wchar_t *failfmt = L"%s is invalid";
-    const wchar_t *tptr = ltrim(pt->tokens[PT_TOK_ISO]);
+    const wchar_t *tptr;
+
+    tptr = ltrim(pt->tokens[PT_TOK_ISO]);
     if (!(qagen_patient_parse_dub(&tptr, L'(', &pt->iso[0])
        || qagen_patient_parse_dub(&tptr, L',', &pt->iso[1])
        || qagen_patient_parse_dub(&tptr, L',', &pt->iso[2]))) {
@@ -84,8 +87,11 @@ static int qagen_patient_tokenize(struct qagen_patient *pt,
     static const wchar_t *failctx = L"Could not parse folder name";
     static const wchar_t *failfmt = L"Found %zu %s, expected %zu";
     static const wchar_t delim = L'~';
-    wchar_t *r = wcschr(dpy, delim);
+    const wchar_t *tok;
+    wchar_t *r;
     size_t i = 0;
+
+    r = wcschr(dpy, delim);
     while (r) {
         if (i < PT_N_TOKENS) {
             pt->tokens[i] = dpy;
@@ -99,7 +105,7 @@ static int qagen_patient_tokenize(struct qagen_patient *pt,
         pt->tokens[i] = dpy;
     }
     if (++i != PT_N_TOKENS) {
-        const wchar_t *tok = (i == 1) ? L"token" : L"tokens";
+        tok = (i == 1) ? L"token" : L"tokens";
         qagen_error_raise(QAGEN_ERR_RUNTIME, failctx, failfmt, i, tok, (size_t)PT_N_TOKENS);
         return 1;
     } else {
@@ -115,6 +121,7 @@ static int qagen_patient_tokenize(struct qagen_patient *pt,
 static size_t write_initials(wchar_t *dst, const wchar_t *name)
 {
     wchar_t *const base = dst;
+
     if (*name) {
         *dst++ = towupper(*name++);
         if (*name) {
@@ -157,6 +164,7 @@ static bool invalid_trailing_char(wchar_t c)
 static int qagen_patient_validate_foldername(wchar_t *name)
 {
     wchar_t *const base = name;
+
     for (; *name; name++) {
         if (!qagen_path_char_isvalid(*name)) {
             *name = L'-';
@@ -176,6 +184,7 @@ static int qagen_patient_validate_foldername(wchar_t *name)
 static int qagen_patient_generate_foldername(struct qagen_patient *pt)
 {
     size_t i = 0;
+
     i += write_initials(pt->foldername + i, pt->tokens[PT_TOK_LNAME]);
     i += write_initials(pt->foldername + i, pt->tokens[PT_TOK_FNAME]);
     pt->foldername[i++] = L'_';
@@ -202,6 +211,7 @@ static int qagen_patient_generate_foldername(struct qagen_patient *pt)
 static wchar_t *qagen_patient_splice_name(wchar_t *full)
 {
     wchar_t *inst = NULL;
+
     for (; *full; full++) {
         if (iswspace(*full) || *full == L'_') {
             inst = full;
@@ -224,6 +234,7 @@ static void qagen_patient_validate_postjson(struct qagen_patient *pt)
  */
 {
     wchar_t *nptr;
+
     if (qagen_string_isempty(pt->tokens[PT_TOK_FNAME])) {
         qagen_log_puts(QAGEN_LOG_WARN, L"Patient's first name string is empty");
         nptr = qagen_patient_splice_name(pt->tokens[PT_TOK_LNAME]);
@@ -267,6 +278,7 @@ int qagen_patient_init(struct qagen_patient *pt,    wchar_t *dpyname,
 void qagen_patient_cleanup(struct qagen_patient *pt)
 {
     unsigned i;
+
     qagen_file_list_free(pt->rtplan);
     qagen_file_list_free(pt->rtdose);
     qagen_file_list_free(pt->dose_beam);
@@ -288,9 +300,11 @@ uint32_t qagen_patient_num_beams(const struct qagen_patient *pt)
 static int qagen_patient_create_mu(struct qagen_patient *pt)
 {
     static const wchar_t *failmsg = L"CreateDirectory failed to create this patient's MU folder";
+    DWORD lasterr;
+
     if (!qagen_path_join(&pt->basepath, L"MU")) {
         if (!CreateDirectory(pt->basepath->buf, NULL)) {
-            DWORD lasterr = GetLastError();
+            lasterr = GetLastError();
             if (lasterr != ERROR_ALREADY_EXISTS) {
                 qagen_error_raise(QAGEN_ERR_WIN32, &lasterr, failmsg);
                 return 1;
@@ -306,9 +320,11 @@ static int qagen_patient_create_mu(struct qagen_patient *pt)
 static int qagen_patient_create_base(struct qagen_patient *pt)
 {
     static const wchar_t *failmsg = L"CreateDirectory failed to create this patient's folder";
+    DWORD lasterr;
+
     if (!qagen_path_join(&pt->basepath, pt->foldername)) {
         if (!CreateDirectory(pt->basepath->buf, NULL)) {
-            DWORD lasterr = GetLastError();
+            lasterr = GetLastError();
             if (lasterr == ERROR_ALREADY_EXISTS) {
                 qagen_log_printf(QAGEN_LOG_WARN, L"Patient folder %s already exists", pt->foldername);
             } else {
@@ -325,10 +341,12 @@ static int qagen_patient_create_base(struct qagen_patient *pt)
 static int qagen_patient_create_dir(struct qagen_patient *pt)
 {
     static const wchar_t *failmsg = L"CreateDirectory failed on patients' root dir";
+    DWORD lasterr;
+
     pt->basepath = qagen_path_create(L".\\patients");
     if (pt->basepath) {
         if (!CreateDirectory(pt->basepath->buf, NULL)) {
-            DWORD lasterr = GetLastError();
+            lasterr = GetLastError();
             if (lasterr != ERROR_ALREADY_EXISTS) {
                 qagen_error_raise(QAGEN_ERR_WIN32, &lasterr, failmsg);
                 return 1;
@@ -351,11 +369,12 @@ static int qagen_patient_create_dir(struct qagen_patient *pt)
 static int qagen_patient_write_json(const struct qagen_patient *pt,
                                     const wchar_t              *dst)
 {
+    wchar_t buf[256];
+
     if (pt->jsonpath[0]) {
         /* Copy */
         if (!CopyFile(pt->jsonpath, dst, FALSE)) {
             /* Don't terminate, just issue a warning */
-            wchar_t buf[256];
             FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
                           NULL,
                           GetLastError(),
@@ -378,6 +397,7 @@ static int qagen_patient_create_json(struct qagen_patient *pt)
     /* static const wchar_t *fname = L"patient.json"; */
     static const wchar_t *fname = L"plan_QA.json";
     int res = 1;
+
     if (!qagen_path_join(&pt->basepath, fname)) {
         res = qagen_patient_write_json(pt, pt->basepath->buf);
         qagen_path_remove_filespec(&pt->basepath);
@@ -393,6 +413,7 @@ static int qagen_patient_create_excel(struct qagen_patient *pt)
 {
     wchar_t buf[26]; /* The max possible for this locale (doesn't even matter because swprintf is bounds-checked anyway, oh well) */
     int res = 1;
+
     swprintf(buf, BUFLEN(buf), L"QA_%uFields.xlsx", qagen_patient_num_beams(pt));
     if (!qagen_path_join(&pt->basepath, buf)) {
         res = qagen_excel_write(pt, pt->basepath->buf);

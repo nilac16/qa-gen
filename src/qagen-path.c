@@ -8,8 +8,11 @@
 
 PATH *qagen_path_create(const wchar_t *path)
 {
-    const size_t len = wcslen(path);
-    PATH *res = qagen_malloc(sizeof *res + sizeof *res->buf * (len + 1));
+    size_t len;
+    PATH *res;
+
+    len = wcslen(path);
+    res = qagen_malloc(sizeof *res + sizeof *res->buf * (len + 1));
     if (res) {
         res->pathlen = len;
         res->buflen = len + 1;
@@ -22,7 +25,9 @@ PATH *qagen_path_create(const wchar_t *path)
 PATH *qagen_path_duplicate(const PATH *path)
 {
     const size_t blksz = sizeof *path + sizeof *path->buf * path->buflen;
-    PATH *res = qagen_malloc(blksz);
+    PATH *res;
+
+    res = qagen_malloc(blksz);
     if (res) {
         memcpy(res, path, blksz);
     }
@@ -50,6 +55,7 @@ static int qagen_path_monotonic(PATH **path, size_t buflen)
 {
     size_t size;
     void *newptr;
+
     if (buflen > (*path)->buflen) {
         size = sizeof **path + sizeof *(*path)->buf * buflen;
         newptr = qagen_realloc(*path, size);
@@ -69,8 +75,10 @@ int qagen_path_join(PATH **root, const wchar_t *ext)
  */
 {
     static const wchar_t *failmsg = L"Failed to combine path strings";
-    const size_t reqlen = (*root)->pathlen + wcslen(ext) + 2;
+    size_t reqlen;
     HRESULT hr;
+
+    reqlen = (*root)->pathlen + wcslen(ext) + 2;
     if (!qagen_path_monotonic(root, reqlen)) {
         hr = PathCchCombineEx((*root)->buf, (*root)->buflen, (*root)->buf, ext, PATHCCH_ALLOW_LONG_PATHS);
         if (SUCCEEDED(hr)) {
@@ -95,8 +103,10 @@ void qagen_path_remove_filespec(PATH **path)
 int qagen_path_rename_extension(PATH **path, const wchar_t *ext)
 {
     static const wchar_t *failmsg = L"Failed to rename file extension";
-    const size_t reqlen = (*path)->pathlen + wcslen(ext) + 2;
+    size_t reqlen;
     HRESULT hr;
+
+    reqlen = (*path)->pathlen + wcslen(ext) + 2;
     if (!qagen_path_monotonic(path, reqlen)) {
         hr = PathCchRenameExtension((*path)->buf, (*path)->buflen, ext);
         if (SUCCEEDED(hr)) {
@@ -135,9 +145,10 @@ bool qagen_path_is_subdirectory(const WIN32_FIND_DATA *fdata)
 
 PATH *qagen_path_to_executable(void)
 {
-    PATH *res = NULL;
     DWORD len = 64, nwrit;
+    PATH *res = NULL;
     void *newptr;
+
     do {
         len *= 2;
         newptr = qagen_realloc(res, sizeof *res + sizeof *res->buf * len);
@@ -160,10 +171,12 @@ bool qagen_path_char_isvalid(wchar_t chr)
     static const wchar_t invalid[] = {
         L'\"', L'*', L'/', L':', L'<', L'>', L'?', L'\\', L'|'
     };
+    unsigned i;
+
     if (chr < 32) {
         return false;
     }
-    for (size_t i = 0; i < BUFLEN(invalid); i++) {
+    for (i = 0; i < BUFLEN(invalid); i++) {
         if (invalid[i] == chr) {
             return false;
         }

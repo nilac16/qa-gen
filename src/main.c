@@ -5,6 +5,7 @@
 static int wmain_except_handler(int xcept, const CONTEXT *ectx)
 {
     const wchar_t *xname = L"SEH exception propagated to main: %#x";
+
     switch (xcept) {
     case STATUS_ACCESS_VIOLATION:
         xname = L"Segmentation fault";
@@ -54,6 +55,7 @@ int wmain(void)
         .ncmdshow = 1
     };
     int stat = 1;
+
     __try {
         stat = qagen_app_open(&app);
         if (!stat) {

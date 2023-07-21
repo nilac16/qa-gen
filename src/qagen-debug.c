@@ -49,14 +49,17 @@ int qagen_debug_print_stack(const CONTEXT *ectx)
 {
     static const wchar_t *fmtlnno = L"   #%d: %#x <%s> (line %d)";
     static const wchar_t *fmtnoln = L"   #%d: %#x <%s>";
-    HANDLE process = GetCurrentProcess();
-    HANDLE thread = GetCurrentThread();
+    HANDLE process, thread;
     IMAGEHLP_LINEW64 line = { 0 };
     STACKFRAME64 frame = { 0 };
     CONTEXT record;
     BOOL res;
     int i = 0;
-    SYMBOL_INFOW *syminfo = _alloca(sizeof *syminfo + sizeof *syminfo->Name * MAX_SYM_NAME);
+    SYMBOL_INFOW *syminfo;
+
+    process = GetCurrentProcess();
+    thread = GetCurrentThread();
+    syminfo = _alloca(sizeof *syminfo + sizeof *syminfo->Name * MAX_SYM_NAME);
     SymInitializeW(process, NULL, TRUE);
     memset(syminfo, 0, sizeof *syminfo);
     memcpy(&record, ectx, sizeof record);
@@ -85,6 +88,7 @@ int qagen_debug_print_stack(const CONTEXT *ectx)
  *      table is fixed size. If too many pointers are inserted, it does not
  *      react in any way, but issues warnings to log files when MEM_LOAD_CAP is
  *      exceeded
+ *  @todo MAJOR: Rewrite the deletion algorithm to actually be correct :p
  */
 static struct {
     ULONG_PTR load;
@@ -99,6 +103,7 @@ static struct {
 void qagen_debug_memtable_insert(const void *addr)
 {
     size_t hash = (ULONG_PTR)addr % BUFLEN(memtable.table);
+
     while (memtable.table[hash].addr) {
         if (memtable.table[hash].addr == addr) {
             qagen_log_printf(QAGEN_LOG_WARN, L"Memtable: Duplicate address %#x", addr);
@@ -140,6 +145,7 @@ static bool qagen_debug_memtable_propcmp(size_t idx, size_t next)
 static void qagen_debug_memtable_propagate(size_t idx)
 {
     size_t next = idx;
+
     do {
         next = (next + 1) % BUFLEN(memtable.table);
     } while (qagen_debug_memtable_propcmp(idx, next));
@@ -153,6 +159,7 @@ static void qagen_debug_memtable_propagate(size_t idx)
 void qagen_debug_memtable_delete(const void *addr)
 {
     size_t hash = (ULONG_PTR)addr % BUFLEN(memtable.table);
+
     while (memtable.table[hash].addr) {
         if (memtable.table[hash].addr == addr) {
             qagen_debug_memtable_propagate(hash);
@@ -169,6 +176,7 @@ void qagen_debug_memtable_delete(const void *addr)
 int qagen_debug_memtable_lookup(const void *addr)
 {
     size_t hash = (ULONG_PTR)addr % BUFLEN(memtable.table);
+
     while (memtable.table[hash].addr) {
         if (memtable.table[hash].addr == addr) {
             return 1;
@@ -191,13 +199,17 @@ int qagen_debug_memtable_lookup(const void *addr)
  */
 static void qagen_memtable_extant_trace(USHORT n, void *frame[])
 {
-    HANDLE process = GetCurrentProcess();
-    SYMBOL_INFOW *syminfo = _alloca(sizeof *syminfo + sizeof *syminfo->Name * MAX_SYM_NAME);
+    SYMBOL_INFOW *syminfo;
+    HANDLE process;
+    USHORT i;
+
+    process = GetCurrentProcess();
+    syminfo = _alloca(sizeof *syminfo + sizeof *syminfo->Name * MAX_SYM_NAME);
     SymInitializeW(process, NULL, TRUE);
     memset(syminfo, 0, sizeof *syminfo);
     syminfo->MaxNameLen = MAX_SYM_NAME - 2;
     syminfo->SizeOfStruct = sizeof *syminfo;
-    for (USHORT i = 0; i < n; i++) {
+    for (i = 0; i < n; i++) {
         qagen_debug_symfromaddr(process, (DWORD64)frame[i], NULL, syminfo);
         qagen_log_printf(QAGEN_LOG_DEBUG, L"   %#x <%s>", frame[i], syminfo->Name);
     }
@@ -206,8 +218,9 @@ static void qagen_memtable_extant_trace(USHORT n, void *frame[])
 
 void qagen_debug_memtable_log_extant(void)
 {
-    unsigned count = 0;
-    for (size_t i = 0; i < BUFLEN(memtable.table); i++) {
+    unsigned count = 0, i;
+
+    for (i = 0; i < BUFLEN(memtable.table); i++) {
         if (memtable.table[i].addr) {
             qagen_log_printf(QAGEN_LOG_DEBUG, L"Memtable: %#x was previously allocated at", memtable.table[i].addr);
             qagen_memtable_extant_trace(memtable.table[i].nframe, memtable.table[i].frame);

@@ -27,6 +27,7 @@ static int qagen_search_rtplan_disambiguate(struct qagen_patient *pt)
     struct qagen_rpwnd rpwnd = { 0 };
     wchar_t **strings;
     int nstrings, res = 1;
+
     nstrings = qagen_file_beam_strings(pt->rtplan, &strings);
     if (nstrings) {
         res = qagen_rpwnd_show(&rpwnd, nstrings, strings);
@@ -61,6 +62,7 @@ static int qagen_search_rs_rtplan(struct qagen_patient *pt,
     static const wchar_t *pattern = L"RP*.dcm";
     uint32_t len;
     int res = 0;
+
     pt->rtplan = qagen_file_enumerate(QAGEN_FILE_DCM_RP, rspath, pattern);
     len = qagen_file_list_len(pt->rtplan);
     qagen_log_printf(QAGEN_LOG_INFO, L"Found %u RP file%s", len, PLFW(len));
@@ -97,6 +99,7 @@ static int qagen_search_rs_rtdose(struct qagen_patient *pt,
     static const wchar_t *pattern = L"RD*.dcm";
     const uint32_t xpected = qagen_patient_num_beams(pt);
     unsigned len;
+
     pt->rtdose = qagen_file_enumerate(QAGEN_FILE_DCM_RD, rspath, pattern);
     len = qagen_file_list_len(pt->rtdose);
     qagen_log_printf(QAGEN_LOG_INFO, L"Found %u RD file%s", len, PLFW(len));
@@ -155,11 +158,15 @@ static void qagen_search_mc2_types(struct qagen_patient *pt,
 {
     static const wchar_t *dcmpat = L"Dose_Beam*.dcm";
     static const wchar_t *mhdpat = L"Dose_Beam*.mhd";
-    const uint32_t xpected = qagen_patient_num_beams(pt);
-    struct qagen_file *head = qagen_file_enumerate(QAGEN_FILE_DCM_DOSEBEAM, dir, dcmpat);
-    unsigned len = qagen_file_list_len(head);
+    struct qagen_file *head;
+    uint32_t xpected;
+    unsigned len;
+
     /* First search for DICOMs (the termination condition guarantees that this
     is correct) */
+    xpected = qagen_patient_num_beams(pt);
+    head = qagen_file_enumerate(QAGEN_FILE_DCM_DOSEBEAM, dir, dcmpat);
+    len = qagen_file_list_len(head);
     if (qagen_error_state()) {
         *state = MC2_SEARCH_ERROR;
     } if (len == xpected) {
@@ -195,9 +202,12 @@ static bool qagen_search_mc2_findnext(HANDLE           hfind,
                                       int             *state)
 {
     static const wchar_t *failmsg = L"Failed to find next folder in MC2 directory";
-    BOOL res = FindNextFile(hfind, fdata);
+    DWORD lasterr;
+    BOOL res;
+
+    res = FindNextFile(hfind, fdata);
     if (!res) {
-        DWORD lasterr = GetLastError();
+        lasterr = GetLastError();
         switch (lasterr) {
         case ERROR_NO_MORE_FILES:
             break;
@@ -216,7 +226,7 @@ static bool qagen_search_mc2_findnext(HANDLE           hfind,
  *  @param fdata
  *      Win32 find data for directories in the MC2 path
  *  @param hfind
- *      Win32 find HANDLE 
+ *      Win32 find HANDLE
  *  @param subdir
  *      Path to be pushed/popped with the searched directory
  *  @param res
@@ -232,6 +242,7 @@ static void qagen_search_mc2_algorithm(struct qagen_patient *pt,
                                        int                  *state)
 {
     bool cont;
+
     do {
         if (qagen_path_is_subdirectory(fdata)) {
             if (qagen_path_join(subdir, fdata->cFileName)) {
@@ -262,14 +273,17 @@ static void qagen_search_mc2_algorithm(struct qagen_patient *pt,
  *  @param fdata
  *      WIN32_FIND_DATA used for iterating subfolders
  *  @returns A findfirst HANDLE used for iterating the subfolders, or
- *      INVALID_HANDLE_VALUE. If an invalid handle is returned, 
+ *      INVALID_HANDLE_VALUE. If an invalid handle is returned,
  */
 static HANDLE qagen_search_mc2_findfirst(const PATH      *mc2path,
                                          WIN32_FIND_DATA *fdata)
 {
     static const wchar_t *failmsg = L"Failed to open MC2 directory search handle";
-    PATH *wildcard = qagen_path_duplicate(mc2path);
     HANDLE res = INVALID_HANDLE_VALUE;
+    PATH *wildcard;
+    DWORD lasterr;
+
+    wildcard = qagen_path_duplicate(mc2path);
     if (wildcard && !qagen_path_join(&wildcard, L"*")) {
         res = FindFirstFileEx(wildcard->buf,
                               FindExInfoStandard,
@@ -278,7 +292,7 @@ static HANDLE qagen_search_mc2_findfirst(const PATH      *mc2path,
                               NULL,
                               0);
         if (res == INVALID_HANDLE_VALUE) {
-            DWORD lasterr = GetLastError();
+            lasterr = GetLastError();
             switch (lasterr) {
             case ERROR_FILE_NOT_FOUND:
                 qagen_log_puts(QAGEN_LOG_WARN, L"MC2 path does not contain subfolders");
@@ -305,7 +319,7 @@ static HANDLE qagen_search_mc2_findfirst(const PATH      *mc2path,
  *        next folder
  *      - Termination occurs when we either find enough DICOM files, or run out
  *        of folders to check
- * 
+ *
  *  @note There is only one list for Dose_Beam files in the patient context. It
  *      may contain either DICOM or MHD files; A list of MHD files may be
  *      overwritten by a list of DICOM files (which will then terminate the
@@ -317,9 +331,13 @@ static int qagen_search_mc2_subdirs(struct qagen_patient *pt,
                                     const PATH           *mc2path)
 {
     WIN32_FIND_DATA fdata;
-    HANDLE hfind = qagen_search_mc2_findfirst(mc2path, &fdata);
-    PATH *subdir = qagen_path_duplicate(mc2path);
-    int state = (qagen_error_state()) ? MC2_SEARCH_ERROR : MC2_SEARCH_FOUND_NONE;
+    HANDLE hfind;
+    PATH *subdir;
+    int state;
+
+    hfind = qagen_search_mc2_findfirst(mc2path, &fdata);
+    subdir = qagen_path_duplicate(mc2path);
+    state = (qagen_error_state()) ? MC2_SEARCH_ERROR : MC2_SEARCH_FOUND_NONE;
     if (hfind != INVALID_HANDLE_VALUE && subdir) {
         state = MC2_SEARCH_FOUND_NONE;
         qagen_search_mc2_algorithm(pt, &fdata, hfind, &subdir, &state);
@@ -340,6 +358,7 @@ static int qagen_search_mc2_template(struct qagen_patient *pt,
 {
     static const wchar_t *templt = L"*template*.dcm";   /* This might be bad */
     uint32_t len;
+
     pt->rd_template = qagen_file_enumerate(QAGEN_FILE_DCM_RD, mc2path, templt);
     len = qagen_file_list_len(pt->rd_template);
     qagen_log_printf(QAGEN_LOG_INFO, L"Found %u RD template%s", len, PLFW(len));
@@ -440,6 +459,7 @@ static PATH *qagen_shell_get_mc2path(const PATH *rspath, const wchar_t *dpyname)
  */
 /* {
     PATH *res = NULL;
+
     if (rspath) {
         res = qagen_path_duplicate(rspath);
         if (res) {
@@ -451,8 +471,10 @@ static PATH *qagen_shell_get_mc2path(const PATH *rspath, const wchar_t *dpyname)
 } */
 {
     PATH *res = NULL;
+    wchar_t *base;
+
     if (rspath) {
-        wchar_t *base = qagen_string_createf(L"%s~MC2", dpyname);
+        base = qagen_string_createf(L"%s~MC2", dpyname);
         if (base) {
             res = qagen_path_duplicate(rspath);
             if (res) {
@@ -482,8 +504,10 @@ static void qagen_shell_select_json(struct qagen_patient    *pt,
 {
     static const wchar_t xpected[] = L"plan_QA.json";
     const struct qagen_file *jptr = jsonls;
+
     if (jptr) {
         /* UGH, strncpy, GROSS */
+        /* wait why am I doing this */
         wcsncpy(pt->jsonpath, jptr->path, BUFLEN(pt->jsonpath));
         jptr = jptr->next;
     }
@@ -510,6 +534,7 @@ static int qagen_shell_confirm_mc2(const struct qagen_patient *pt,
                                    PATH                      **mc2path)
 {
     int res = 0;
+
     if (pt->jsonpath[0]) {
         qagen_log_puts(QAGEN_LOG_INFO, L"Found a patient JSON, using new directory structure");
         qagen_path_free(*mc2path);
@@ -544,9 +569,11 @@ static int qagen_shell_find_json(struct qagen_patient *pt,
                                  PATH                **mc2path)
 {
     static const wchar_t *wildcard = L"*.json"; /* Oh god I hope FindFirstFile is not case-sensitive */
-    PATH *root = qagen_path_duplicate(rspath);
     struct qagen_file *jsonls;
     int res = 0;
+    PATH *root;
+
+    root = qagen_path_duplicate(rspath);
     if (!root) {
         return 1;
     }
@@ -583,9 +610,11 @@ static int qagen_shell_init_patient(const wchar_t *rsstr, wchar_t *dpyname,
                                     DWORD          ptidx, DWORD    totalpts)
 {
     struct qagen_patient pt = { 0 };    /* REMEMBER THIS */
-    PATH *rspath = qagen_path_create(rsstr);
-    PATH *mc2path = qagen_shell_get_mc2path(rspath, dpyname);
+    PATH *rspath, *mc2path;
     int res = 1;
+
+    rspath = qagen_path_create(rsstr);
+    mc2path = qagen_shell_get_mc2path(rspath, dpyname);
     if (mc2path) {
         res = qagen_shell_find_json(&pt, rspath, &mc2path);
         res = (res) ? res : qagen_patient_init(&pt, dpyname, ptidx, totalpts);
@@ -611,13 +640,15 @@ static int qagen_shell_init_patient(const wchar_t *rsstr, wchar_t *dpyname,
  *  @note OK, if any windows were closed past this point, we should treat that
  *      as a single patient cancel, and not a close. Basically: If we get to
  *      this point, there is no closing the application, only cancelling a
- *      single operation 
+ *      single operation
  */
 static qagen_shlres_t qagen_shell_create_patients(struct qagen_filedlg *dlg)
 {
     wchar_t *rspath, *dpyname;
     qagen_shlres_t res = SHELL_NORMAL;
-    for (DWORD i = 0; i < dlg->count && !res; i++) {
+    DWORD i;
+
+    for (i = 0; i < dlg->count && !res; i++) {
         if (!qagen_filedlg_path(dlg, i, &rspath, &dpyname)) {
             if (qagen_shell_init_patient(rspath, dpyname, i, dlg->count)) {
                 res = (qagen_error_state()) ? SHELL_ERROR : SHELL_NORMAL;
@@ -634,6 +665,7 @@ qagen_shlres_t qagen_shell_run(void)
 {
     struct qagen_filedlg fdlg = { 0 };
     qagen_shlres_t res;
+
     switch (qagen_filedlg_show(&fdlg)) {
     case FILEDLG_CLOSED:
         res = SHELL_CLOSED;

@@ -259,8 +259,9 @@ void MHDConverter::convert_pixels(DcmDataset *dset)
     const DataT dosegridscal = datamax(dptr, dptr + n) / (DataT)std::numeric_limits<PixelT>::max();
     PixelT *dest, *dstptr;
     OFCondition stat;
+
     write_grid_scaling(dset, dosegridscal);
-    dest = dstptr = new PixelT[n];
+    dest = dstptr = new PixelT[n];  /* Everything in here is noexcept */
     /* Write each frame backwards */
     dptr += framelen;
     for (int k = 0; k < m_mhd.DimSize(2); k++) {

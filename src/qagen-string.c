@@ -18,7 +18,9 @@
 static size_t qagen_string_get_fmtsize(const wchar_t *restrict fmt, va_list args)
 {
     static const wchar_t *failmsg = L"Failed to compute size of formatted output";
-    int code = _vsnwprintf(NULL, 0, fmt, args);
+    int code;
+
+    code = _vsnwprintf(NULL, 0, fmt, args);
     if (code < 0) {
         qagen_error_raise(QAGEN_ERR_SYSTEM, &(const int){ EILSEQ }, failmsg);
         return 0;
@@ -33,6 +35,7 @@ wchar_t *qagen_string_createf(const wchar_t *restrict fmt, ...)
     wchar_t *res = NULL;
     va_list args;
     size_t len;
+
     va_start(args, fmt);
     len = qagen_string_get_fmtsize(fmt, args);
     va_end(args);
@@ -54,16 +57,18 @@ int qagen_string_concatf(wchar_t       *restrict *dst,
                          ...)
 {
     static const wchar_t *failmsg = L"Failed to concatenate formatted string";
-    const size_t origlen = wcslen(*dst);
-    size_t extra, needed;
+    size_t origlen, extra, needed;
+    wchar_t *test;
     va_list args;
+
+    origlen = wcslen(*dst);
     va_start(args, fmt);
     extra = qagen_string_get_fmtsize(fmt, args);
     va_end(args);
     if (extra) {
         needed = origlen + extra;
         if (needed > *dstcount) {
-            wchar_t *test = qagen_realloc(*dst, sizeof *test * needed);
+            test = qagen_realloc(*dst, sizeof *test * needed);
             if (test) {
                 *dst = test;
                 *dstcount = needed;
@@ -90,6 +95,7 @@ wchar_t *qagen_string_utf16cvt(const char *utf8)
 bool qagen_string_isempty(const wchar_t *s)
 {
     bool res = true;
+
     while (*s && res) {
         res = iswspace(*s);
         s++;

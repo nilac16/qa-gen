@@ -30,8 +30,9 @@ static struct qagen_file *qagen_file_create_node(qagen_file_t   type,
                                                  PATH         **base,
                                                  const wchar_t *name)
 {
-    size_t size;
     struct qagen_file *node = NULL;
+    size_t size;
+
     if (!qagen_path_join(base, name)) {
         size = sizeof *node + sizeof *node->path * ((*base)->pathlen + 1);
         node = qagen_calloc(1UL, size);
@@ -51,7 +52,9 @@ static struct qagen_file *qagen_file_create_node(qagen_file_t   type,
 
 static PATH *qagen_file_make_wildcard(const PATH *dir, const wchar_t *pattern)
 {
-    PATH *res = qagen_path_duplicate(dir);
+    PATH *res;
+
+    res = qagen_path_duplicate(dir);
     if (res) {
         if (qagen_path_join(&res, pattern)) {
             qagen_ptr_nullify(&res, qagen_path_free);
@@ -69,10 +72,12 @@ static HANDLE qagen_file_find_first(const PATH      *pattern,
 {
     static const wchar_t *failmsg = L"Failed to open file FindFirst handle";
     HANDLE res = INVALID_HANDLE_VALUE;
+    DWORD err;
+
     if (pattern) {
         res = FindFirstFile(pattern->buf, fdata);
         if (res == INVALID_HANDLE_VALUE) {
-            DWORD err = GetLastError();
+            err = GetLastError();
             switch (err) {
             case ERROR_FILE_NOT_FOUND:
             case ERROR_PATH_NOT_FOUND:
@@ -90,9 +95,12 @@ static HANDLE qagen_file_find_first(const PATH      *pattern,
 static bool qagen_file_find_next(HANDLE hfile, WIN32_FIND_DATA *fdata)
 {
     static const wchar_t *failmsg = L"Failed to find next file from FindFirst handle";
-    bool res = FindNextFile(hfile, fdata);
+    DWORD err;
+    bool res;
+
+    res = FindNextFile(hfile, fdata);
     if (!res) {
-        DWORD err = GetLastError();
+        err = GetLastError();
         switch (err) {
         case ERROR_NO_MORE_FILES:
             break;
@@ -112,8 +120,11 @@ struct qagen_file *qagen_file_enumerate(qagen_file_t   type,
     static const wchar_t *failmsg = L"Failed to enumerate files";
     struct qagen_file *res = NULL, **end = &res;
     WIN32_FIND_DATA fdata;
-    PATH *wildcard = qagen_file_make_wildcard(dir, pattern);
-    HANDLE hfile = qagen_file_find_first(wildcard, &fdata);
+    PATH *wildcard;
+    HANDLE hfile;
+
+    wildcard = qagen_file_make_wildcard(dir, pattern);
+    hfile = qagen_file_find_first(wildcard, &fdata);
     if (hfile != INVALID_HANDLE_VALUE) {
         qagen_path_remove_filespec(&wildcard);
         do {
@@ -159,6 +170,7 @@ static bool qagen_file_filterable(const struct qagen_file *rd,
 void qagen_file_filter_rd(struct qagen_file **rd, const struct qagen_file *rp)
 {
     struct qagen_file *del;
+
     qagen_log_printf(QAGEN_LOG_DEBUG, L"Filtering RP SOPInstanceUID %S",
         rp->data.rp.sop_inst_uid);
     while (*rd) {
@@ -176,6 +188,7 @@ void qagen_file_filter_rd(struct qagen_file **rd, const struct qagen_file *rp)
 void qagen_file_list_free(struct qagen_file *head)
 {
     struct qagen_file *next;
+
     for (; head; head = next) {
         next = head->next;
         qagen_file_free_node(head);
@@ -186,6 +199,7 @@ void qagen_file_list_free(struct qagen_file *head)
 uint32_t qagen_file_list_len(const struct qagen_file *head)
 {
     uint32_t res = 0;
+
     for (; head; head = head->next) {
         res++;
     }
@@ -196,6 +210,7 @@ uint32_t qagen_file_list_len(const struct qagen_file *head)
 struct qagen_file *qagen_file_list_extract(struct qagen_file *head, int idx)
 {
     struct qagen_file *res, **eptr = &head;
+
     while (idx--) {
         eptr = &(*eptr)->next;
     }
@@ -211,13 +226,15 @@ struct qagen_file *qagen_file_list_extract(struct qagen_file *head, int idx)
  */
 static wchar_t *qagen_file_single_string(const struct qagen_file *head)
 {
-    wchar_t *res = qagen_string_createf(L"{(%s: %.2f MU)",
-                                        head->data.rp.beam[0].name,
-                                        head->data.rp.beam[0].meterset);
-    size_t count;
+    size_t count, i;
+    wchar_t *res;
+
+    res = qagen_string_createf(L"{(%s: %.2f MU)",
+                               head->data.rp.beam[0].name,
+                               head->data.rp.beam[0].meterset);
     if (res) {
         count = wcslen(res) + 1;
-        for (size_t i = 1; i < head->data.rp.nbeams; i++) {
+        for (i = 1; i < head->data.rp.nbeams; i++) {
             if (qagen_string_concatf(&res, &count, L", (%s: %.2f MU)",
                                      head->data.rp.beam[i].name,
                                      head->data.rp.beam[i].meterset)) {
@@ -237,7 +254,9 @@ static int qagen_file_write_strings(const struct qagen_file *head,
                                     wchar_t                **str,
                                     const int                count)
 {
-    for (int i = 0; i < count; i++) {
+    int i;
+
+    for (i = 0; i < count; i++) {
         str[i] = qagen_file_single_string(head);
         if (!str[i]) {
             qagen_file_beam_strings_free(count, str);
@@ -250,6 +269,7 @@ static int qagen_file_write_strings(const struct qagen_file *head,
 int qagen_file_beam_strings(const struct qagen_file *head, wchar_t ***str)
 {
     int count = 0;
+
     if (head->type == QAGEN_FILE_DCM_RP) {
         count = qagen_file_list_len(head);
         *str = qagen_calloc(count, sizeof **str);
@@ -267,8 +287,10 @@ int qagen_file_beam_strings(const struct qagen_file *head, wchar_t ***str)
 
 void qagen_file_beam_strings_free(int nstr, wchar_t **str)
 {
+    int i;
+
     if (str) {
-        for (int i = 0; i < nstr; i++) {
+        for (i = 0; i < nstr; i++) {
             qagen_free(str[i]);
         }
         qagen_free(str);
@@ -286,13 +308,15 @@ static ULONGLONG qagen_file_size(const struct qagen_file *file)
     static const wchar_t *failmsg = L"Failed to get the size of a file";
     const DWORD access = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
     LARGE_INTEGER sz = { .QuadPart = 0 };
-    HANDLE hfile = CreateFile(file->path,
-                              0,
-                              access,
-                              NULL,
-                              OPEN_EXISTING,
-                              0,
-                              NULL);
+    HANDLE hfile;
+
+    hfile = CreateFile(file->path,
+                       0,
+                       access,
+                       NULL,
+                       OPEN_EXISTING,
+                       0,
+                       NULL);
     if (hfile != INVALID_HANDLE_VALUE) {
         if (!GetFileSizeEx(hfile, &sz)) {
             qagen_error_raise(QAGEN_ERR_WIN32, NULL, failmsg);
@@ -309,6 +333,7 @@ static ULONGLONG qagen_file_size(const struct qagen_file *file)
 ULONGLONG qagen_file_list_totalsize(const struct qagen_file *file)
 {
     ULONGLONG res = 0, inc;
+
     for (; file; file = file->next) {
         inc = qagen_file_size(file);
         if (inc) {

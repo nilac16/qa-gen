@@ -8,7 +8,7 @@ find_package(json-c REQUIRED)
 
 find_package(ZLIB REQUIRED)
 find_path(LXW_INCLUDE_DIRS xlsxwriter.h)
-find_library(LXW_LIBRARIES xlsxwriter)
+find_library(LXW_LIBRARIES xlsxwriter REQUIRED)
 
 include(${ITK_USE_FILE})
 

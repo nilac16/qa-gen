@@ -24,6 +24,7 @@ static qagen_loglvl_t qagen_app_log_threshold(void)
 static int qagen_app_init_log(void)
 {
     static struct qagen_log log;
+
     if (!qagen_console_init(&app->cons)) {
         log.threshold = qagen_app_log_threshold();
         log.callback = (qagen_logfn_t)qagen_console_callback;
@@ -43,6 +44,7 @@ static int qagen_app_init_log(void)
 static int qagen_app_check_cwd(void)
 {
     static const wchar_t *fmt = L"GetDriveType: %s";
+
     switch (GetDriveType(NULL)) {
     case DRIVE_UNKNOWN:
         qagen_log_printf(QAGEN_LOG_INFO, fmt, L"DRIVE_UNKNOWN");
@@ -75,8 +77,11 @@ static int qagen_app_check_cwd(void)
 static int qagen_app_init_cwd(void)
 {
     static const wchar_t *failmsg = L"Failed to set CWD to executable path";
-    PATH *exepath = qagen_path_to_executable();
-    int res = exepath == NULL;
+    PATH *exepath;
+    int res;
+
+    exepath = qagen_path_to_executable();
+    res = exepath == NULL;
     if (exepath) {
         qagen_path_remove_filespec(&exepath);
         if (SetCurrentDirectory(exepath->buf)) {
@@ -99,6 +104,7 @@ static int qagen_app_init_comctl(void)
         .dwSize = sizeof iccex,
         .dwICC  = ICC_STANDARD_CLASSES
     };
+
     if (!InitCommonControlsEx(&iccex)) {
         qagen_error_raise(QAGEN_ERR_WIN32, NULL, failmsg);
         return 1;
@@ -110,7 +116,9 @@ static int qagen_app_init_comctl(void)
 static int qagen_app_init_com(void)
 {
     static const wchar_t *failmsg = L"Failed to initialize COM";
-    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    HRESULT hr;
+
+    hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     if (FAILED(hr)) {
         qagen_error_raise(QAGEN_ERR_HRESULT, &hr, failmsg);
     }
@@ -133,7 +141,9 @@ static int qagen_app_init(void)
         qagen_app_init_com,
         qagen_app_init_rpwnd
     };
-    for (unsigned i = 0; i < BUFLEN(table); i++) {
+    unsigned i;
+
+    for (i = 0; i < BUFLEN(table); i++) {
         if (table[i]()) {
             return 1;
         }
@@ -157,6 +167,7 @@ static bool qagen_app_continue(void)
     static const wchar_t *failmsg = L"Task dialog failed to display";
     HRESULT hr;
     int res;
+
     hr = TaskDialog(NULL,
                     app->hinst,
                     L"Continue",
@@ -177,6 +188,7 @@ static bool qagen_app_continue(void)
 int qagen_app_run(void)
 {
     bool shouldcontinue;
+
     do {
         switch (qagen_shell_run()) {
         case SHELL_CLOSED:
@@ -218,8 +230,9 @@ HINSTANCE qagen_app_instance(void)
 void qagen_app_show_error(void)
 {
     static const wchar_t *title = L"Error";
-    wchar_t buf[256];
     const wchar_t *ctx, *msg;
+    wchar_t buf[256];
+
     qagen_error_string(&ctx, &msg);
     swprintf(buf, BUFLEN(buf), L"%s\n%s", ctx, msg);
     MessageBoxEx(NULL, buf, title, MB_ICONERROR, LANG_USER_DEFAULT);

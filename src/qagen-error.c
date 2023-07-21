@@ -12,6 +12,7 @@ thread_local struct qagen_error error = { 0 };
 static void qagen_error_win32(const DWORD *data)
 {
     wchar_t sysbuf[128];
+
     error.dwerr = (data) ? *data : GetLastError();
     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
                   NULL,
@@ -27,6 +28,7 @@ static void qagen_error_win32(const DWORD *data)
 static void qagen_error_hresult(const HRESULT *hr)
 {
     wchar_t sysbuf[128];
+
     error.hr = *hr;
     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
                   NULL,
@@ -57,6 +59,7 @@ static void qagen_error_runtime(const wchar_t *message)
 void qagen_error_raise(int type, const void *data, const wchar_t *restrict fmt, ...)
 {
     va_list args;
+
     memset(&error, 0, sizeof error);
     error.type = type;
     if (type) {

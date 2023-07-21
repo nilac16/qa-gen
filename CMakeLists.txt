@@ -7,6 +7,7 @@ find_package(ITK REQUIRED)
 find_package(json-c REQUIRED)
 
 find_package(ZLIB REQUIRED)
+find_package(unofficial-minizip REQUIRED) # also wtf
 find_path(LXW_INCLUDE_DIRS xlsxwriter.h)
 find_library(LXW_LIBRARIES xlsxwriter REQUIRED)
 
@@ -37,7 +38,8 @@ target_link_libraries(${PROJECT_NAME}
                       ${ITK_LIBRARIES}
                       json-c::json-c
                       ${LXW_LIBRARIES}
-                      ${ZLIB_LIBRARIES}
+                      ZLIB::ZLIB
+                      unofficial::minizip::minizip
                       -manifest:embed
                       -manifestinput:${APP_MANIFEST})
 

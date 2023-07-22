@@ -45,6 +45,9 @@ class MHDConverter {
 public:
     /** @struct Exception class, raises an application error on construction */
     struct Exception {
+        /* Warning: The first two variadic constructors have confusing overload
+        resolutions */
+
         /** @brief Raise a runtime error with @p msg and @p fmt provided */
         Exception(const wchar_t *restrict msg, const wchar_t *restrict fmt, ...);
 

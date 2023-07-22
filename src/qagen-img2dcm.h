@@ -1,5 +1,7 @@
 #pragma once
-
+/** Avoid linking with this module if possible. It requires full linkage with
+ *  ITK, which bloats the crap out of the executable
+ */
 #ifndef QAGEN_IMG2DCM_H
 #define QAGEN_IMG2DCM_H
 

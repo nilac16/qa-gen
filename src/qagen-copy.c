@@ -3,6 +3,7 @@
 #include "qagen-error.h"
 #include "qagen-string.h"
 #include "qagen-metaio.h"
+#include "qagen-img2dcm.h"
 #include "qagen-memory.h"
 #include "qagen-log.h"
 
@@ -311,7 +312,7 @@ static int qagen_copy_rtdose(struct qagen_copy_ctx *ctx,
 }
 
 
-static void qagen_copy_mhd_prepare(struct qagen_copy_ctx   *ctx,
+static void qagen_copy_itk_prepare(struct qagen_copy_ctx   *ctx,
                                    const struct qagen_file *mhd)
 {
     qagen_copy_set_message(ctx, true);
@@ -320,11 +321,45 @@ static void qagen_copy_mhd_prepare(struct qagen_copy_ctx   *ctx,
 }
 
 
-static void qagen_copy_mhd_complete(struct qagen_copy_ctx *ctx)
+static void qagen_copy_itk_complete(struct qagen_copy_ctx *ctx)
 {
     ctx->completed += ctx->templatesz;
     ctx->ncopied++;
     qagen_copy_update_dlg(ctx);
+}
+
+
+/** @brief Converts the MHD/RAW files into DICOM files in the destination
+ *      directory
+ *  @param ctx
+ *      Copy context
+ *  @param pt
+ *      Patient context
+ *  @returns Nonzero on error
+ *  @note This function must update the progress dialog itself, because no
+ *      calls are made to the copy progress routine
+ */
+static int qagen_copy_itk_dosebeams(struct qagen_copy_ctx *ctx,
+                                    struct qagen_patient  *pt)
+{
+    const struct qagen_file *itk = pt->dose_beam;
+    const wchar_t *const template = (pt->rd_template) ? pt->rd_template->path : pt->rtdose->path;
+    int res = 0;
+
+    for (; itk && !res && !qagen_progdlg_cancelled(&ctx->pdlg); itk = itk->next) {
+        if (qagen_path_join(&pt->basepath, itk->name)) {
+            return 1;
+        }
+        qagen_copy_itk_prepare(ctx, itk);
+        qagen_path_remove_extension(&pt->basepath);
+        res = qagen_path_rename_extension(&pt->basepath, L"dcm")
+           || qagen_img2dcm_convert(itk->path, pt->basepath->buf, template);
+        qagen_path_remove_filespec(&pt->basepath);
+        if (!res) {
+            qagen_copy_itk_complete(ctx);
+        }
+    }
+    return res;
 }
 
 
@@ -349,12 +384,12 @@ static int qagen_copy_mhd_dosebeams(struct qagen_copy_ctx *ctx,
         if (qagen_path_join(&pt->basepath, mhd->name)) {
             return 1;
         }
-        qagen_copy_mhd_prepare(ctx, mhd);
+        qagen_copy_itk_prepare(ctx, mhd);
         res = qagen_path_rename_extension(&pt->basepath, L"dcm")
            || qagen_metaio_convert(mhd->path, pt->basepath->buf, template);
         qagen_path_remove_filespec(&pt->basepath);
         if (!res) {
-            qagen_copy_mhd_complete(ctx);
+            qagen_copy_itk_complete(ctx);
         }
     }
     return res;
@@ -400,9 +435,13 @@ static int qagen_copy_dosebeams(struct qagen_copy_ctx *ctx,
     if (!pt->dose_beam) {
         return 0;
     }
-    if (pt->dose_beam->type == QAGEN_FILE_MHD_DOSEBEAM) {
+    switch (pt->dose_beam->type) {
+    case QAGEN_FILE_MHD_DOSEBEAM:
         return qagen_copy_mhd_dosebeams(ctx, pt);
-    } else {
+    case QAGEN_FILE_ITK_DOSEBEAM:
+        return qagen_copy_itk_dosebeams(ctx, pt);
+    case QAGEN_FILE_DCM_DOSEBEAM:
+    default:
         return qagen_copy_dcm_dosebeams(ctx, pt);
     }
 }

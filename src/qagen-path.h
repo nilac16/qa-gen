@@ -62,8 +62,8 @@ void qagen_path_remove_filespec(PATH **path);
 
 /** @brief Removes extensions, until no further removal is possible. This is
  *      intended for filenames with compound extensions (like nii.gz). If your
- *      goal is to replace the extension of a path with a simple extension, use
- *      qagen_path_rename_extension
+ *      goal is to replace the extension of a path that contains a simple
+ *      extension, use qagen_path_rename_extension
  *  @param path
  *      Path to be modified
  *  @note This function fails silently. Odd behavior with output paths may trace

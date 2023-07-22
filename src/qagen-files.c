@@ -16,6 +16,7 @@ static int qagen_file_initialize_data(struct qagen_file *file)
     case QAGEN_FILE_DCM_DOSEBEAM:
         return qagen_rtdose_load(&file->data.rd, file->path);
     case QAGEN_FILE_MHD_DOSEBEAM:
+    case QAGEN_FILE_ITK_DOSEBEAM:
     case QAGEN_FILE_OTHER:
         return 0;
     }

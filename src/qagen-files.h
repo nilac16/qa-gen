@@ -24,6 +24,7 @@ typedef enum qagen_file_type {
     QAGEN_FILE_DCM_RD,
     QAGEN_FILE_DCM_DOSEBEAM,
     QAGEN_FILE_MHD_DOSEBEAM,
+    QAGEN_FILE_ITK_DOSEBEAM,
 
     QAGEN_FILE_OTHER    /* If this is set, the union has invalid data. The
                         owning scope will need to know what this list contains */

@@ -135,11 +135,6 @@ static int qagen_search_rs_folder(struct qagen_patient *pt,
 }
 
 
-/** Potentially adding support for LZW-compressed NIFTI files
- *  Find 
- */
-
-
 enum {
     MC2_SEARCH_ERROR = -1,
     MC2_SEARCH_FOUND_NONE,
@@ -147,6 +142,82 @@ enum {
     MC2_SEARCH_FOUND_MHD,
     MC2_SEARCH_FOUND_NIFTI
 };
+
+
+static void qagen_search_mc2_dicom(struct qagen_patient *pt,
+                                   const PATH           *dir,
+                                   int                  *state)
+{
+    static const wchar_t *pattern = L"Dose_Beam*.dcm";
+    struct qagen_file *head;
+    uint32_t xpected;
+    unsigned len;
+
+    xpected = qagen_patient_num_beams(pt);
+    head = qagen_file_enumerate(QAGEN_FILE_DCM_DOSEBEAM, dir, pattern);
+    len = qagen_file_list_len(head);
+    if (qagen_error_state()) {
+        *state = MC2_SEARCH_ERROR;
+    } if (len == xpected) {
+        *state = MC2_SEARCH_FOUND_DICOM;
+        qagen_file_list_free(pt->dose_beam);
+        pt->dose_beam = head;
+        qagen_log_printf(QAGEN_LOG_INFO, L"Found %u DICOM Dose_Beam%s", len, PLFW(len));
+    } else {
+        qagen_log_printf(QAGEN_LOG_WARN, L"Found %u DICOM Dose_Beam%s, expected %u", len, PLFW(len), xpected);
+        qagen_file_list_free(head);
+    }
+}
+
+
+static void qagen_search_mc2_mhd(struct qagen_patient *pt,
+                                 const PATH           *dir,
+                                 int                  *state)
+{
+    static const wchar_t *pattern = L"Dose_Beam*.mhd";
+    struct qagen_file *head;
+    uint32_t xpected;
+    unsigned len;
+
+    xpected = qagen_patient_num_beams(pt);
+    head = qagen_file_enumerate(QAGEN_FILE_MHD_DOSEBEAM, dir, pattern);
+    len = qagen_file_list_len(head);
+    if (qagen_error_state()) {
+        *state = MC2_SEARCH_ERROR;
+    } else if (len == xpected) {
+        *state = MC2_SEARCH_FOUND_MHD;
+        pt->dose_beam = head;
+        qagen_log_printf(QAGEN_LOG_INFO, L"Found %u MHD Dose_Beam%s", len, PLFW(len));
+    } else {
+        qagen_log_printf(QAGEN_LOG_WARN, L"Found %u MHD Dose_Beam%s, expected %u", len, PLFW(len), xpected);
+        qagen_file_list_free(head);
+    }
+}
+
+
+static void qagen_search_mc2_nii(struct qagen_patient *pt,
+                                 const PATH           *dir,
+                                 int                  *state)
+{
+    static const wchar_t *pattern = L"Dose_Beam*.nii.gz";
+    struct qagen_file *head;
+    uint32_t xpected;
+    unsigned len;
+
+    xpected = qagen_patient_num_beams(pt);
+    head = qagen_file_enumerate(QAGEN_FILE_ITK_DOSEBEAM, dir, pattern);
+    len = qagen_file_list_len(head);
+    if (qagen_error_state()) {
+        *state = MC2_SEARCH_ERROR;
+    } else if (len == xpected) {
+        *state = MC2_SEARCH_FOUND_NIFTI;
+        pt->dose_beam = head;
+        qagen_log_printf(QAGEN_LOG_INFO, L"Found %u NIfTI Dose_Beam%s", len, PLFW(len));
+    } else {
+        qagen_log_printf(QAGEN_LOG_WARN, L"Found %u NIfTI Dose_Beam%s, expected %u", len, PLFW(len), xpected);
+        qagen_file_list_free(head);
+    }
+}
 
 
 /** @brief Searches first for Dose_Beam* DICOM files. If it does not find any,
@@ -162,43 +233,18 @@ static void qagen_search_mc2_types(struct qagen_patient *pt,
                                    const PATH           *dir,
                                    int                  *state)
 {
-    static const wchar_t *dcmpat = L"Dose_Beam*.dcm";
-    static const wchar_t *mhdpat = L"Dose_Beam*.mhd";
-    struct qagen_file *head;
-    uint32_t xpected;
-    unsigned len;
-
     /* First search for DICOMs (the termination condition guarantees that this
     is correct) */
-    xpected = qagen_patient_num_beams(pt);
-    head = qagen_file_enumerate(QAGEN_FILE_DCM_DOSEBEAM, dir, dcmpat);
-    len = qagen_file_list_len(head);
-    if (qagen_error_state()) {
-        *state = MC2_SEARCH_ERROR;
-    } if (len == xpected) {
-        *state = MC2_SEARCH_FOUND_DICOM;
-        qagen_file_list_free(pt->dose_beam);
-        pt->dose_beam = head;
-        qagen_log_printf(QAGEN_LOG_INFO, L"Found %u DICOM Dose_Beam%s", len, PLFW(len));
-    } else {
-        qagen_log_printf(QAGEN_LOG_WARN, L"Found %u DICOM Dose_Beam%s, expected %u", len, PLFW(len), xpected);
-        qagen_ptr_nullify(&head, qagen_file_list_free);
+    qagen_search_mc2_dicom(pt, dir, state);
+    if (*state != MC2_SEARCH_FOUND_NONE) {
+        return;
     }
     /* Search for MHDs if we have not found anything */
-    if (*state == MC2_SEARCH_FOUND_NONE) {
-        head = qagen_file_enumerate(QAGEN_FILE_MHD_DOSEBEAM, dir, mhdpat);
-        len = qagen_file_list_len(head);
-        if (qagen_error_state()) {
-            *state = MC2_SEARCH_ERROR;
-        } else if (len == xpected) {
-            *state = MC2_SEARCH_FOUND_MHD;
-            pt->dose_beam = head;
-            qagen_log_printf(QAGEN_LOG_INFO, L"Found %u MHD Dose_Beam%s", len, PLFW(len));
-        } else {
-            qagen_log_printf(QAGEN_LOG_WARN, L"Found %u MHD Dose_Beam%s, expected %u", len, PLFW(len), xpected);
-            qagen_file_list_free(head);
-        }
+    qagen_search_mc2_mhd(pt, dir, state);
+    if (*state != MC2_SEARCH_FOUND_NONE) {
+        return;
     }
+    qagen_search_mc2_nii(pt, dir, state);
 }
 
 
@@ -266,6 +312,7 @@ static void qagen_search_mc2_algorithm(struct qagen_patient *pt,
             break;
         case MC2_SEARCH_FOUND_NONE:
         case MC2_SEARCH_FOUND_MHD:
+        case MC2_SEARCH_FOUND_NIFTI:
             cont = qagen_search_mc2_findnext(hfind, fdata, state);
             break;
         }

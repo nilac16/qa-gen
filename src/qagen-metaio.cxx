@@ -103,7 +103,7 @@ void MHDConverter::load_mhd(const wchar_t *fname)
         throw Exception(EILSEQ, L"Cannot convert MHD input path to UTF-8");
     }
     if (!m_mhd.Read(buf)) {
-        throw Exception(L"Cannot read MHD: %s", fname);
+        throw Exception(L"Cannot read MHD");
     }
     if (m_mhd.NDims() != 3) {
         throw Exception(L"MHD has invalid dimensionality %d", m_mhd.NDims());

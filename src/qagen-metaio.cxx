@@ -33,9 +33,10 @@ const wchar_t *MHDConverter::m_failmsg = L"Cannot convert MHD file";
 MHDConverter::Exception::Exception(const wchar_t *restrict msg, const wchar_t *restrict fmt, ...)
 {
     wchar_t buf[128];
-    std::va_list args;
+    va_list args;
+
     va_start(args, fmt);
-    std::vswprintf(buf, BUFLEN(buf), fmt, args);
+    vswprintf(buf, BUFLEN(buf), fmt, args);
     va_end(args);
     qagen_error_raise(QAGEN_ERR_RUNTIME, msg, buf);
 }
@@ -44,9 +45,10 @@ MHDConverter::Exception::Exception(const wchar_t *restrict msg, const wchar_t *r
 MHDConverter::Exception::Exception(const wchar_t *restrict fmt, ...)
 {
     wchar_t buf[128];
-    std::va_list args;
+    va_list args;
+
     va_start(args, fmt);
-    std::vswprintf(buf, BUFLEN(buf), fmt, args);
+    vswprintf(buf, BUFLEN(buf), fmt, args);
     va_end(args);
     qagen_error_raise(QAGEN_ERR_RUNTIME, m_failmsg, buf);
 }
@@ -55,10 +57,11 @@ MHDConverter::Exception::Exception(const wchar_t *restrict fmt, ...)
 MHDConverter::Exception::Exception(OFCondition stat, const wchar_t *restrict fmt, ...)
 {
     wchar_t buf1[128], buf2[128];
-    std::va_list args;
-    std::mbstowcs(buf1, stat.text(), BUFLEN(buf1));
+    va_list args;
+
+    mbstowcs(buf1, stat.text(), BUFLEN(buf1));
     va_start(args, fmt);
-    std::vswprintf(buf2, BUFLEN(buf2), fmt, args);
+    vswprintf(buf2, BUFLEN(buf2), fmt, args);
     va_end(args);
     qagen_error_raise(QAGEN_ERR_RUNTIME, buf1, buf2);
 }
@@ -67,9 +70,10 @@ MHDConverter::Exception::Exception(OFCondition stat, const wchar_t *restrict fmt
 MHDConverter::Exception::Exception(int errnum, const wchar_t *restrict fmt, ...)
 {
     wchar_t buf[128];
-    std::va_list args;
+    va_list args;
+
     va_start(args, fmt);
-    std::vswprintf(buf, BUFLEN(buf), fmt, args);
+    vswprintf(buf, BUFLEN(buf), fmt, args);
     va_end(args);
     qagen_error_raise(QAGEN_ERR_SYSTEM, &errnum, buf);
 }
@@ -86,6 +90,7 @@ void MHDConverter::Exception::ofcheck(OFCondition stat, const wchar_t *msg)
 void MHDConverter::load_template(const wchar_t *fname)
 {
     OFCondition stat;
+
     stat = m_dcfile.loadFile(OFFilename(fname));
     Exception::ofcheck(stat, L"Cannot load RD template");
 }
@@ -103,7 +108,7 @@ void MHDConverter::load_mhd(const wchar_t *fname)
     if (m_mhd.NDims() != 3) {
         throw Exception(L"MHD has invalid dimensionality %d", m_mhd.NDims());
     }
-    if (m_mhd.ElementType() != MET_FLOAT) {  
+    if (m_mhd.ElementType() != MET_FLOAT) {
         throw Exception(L"Invalid MHD encoding: Expected MET_FLOAT, found %S", MET_ValueTypeName[m_mhd.ElementType()]);
     }
 }

@@ -7,7 +7,7 @@ find_package(ITK REQUIRED)
 find_package(json-c REQUIRED)
 
 find_package(ZLIB REQUIRED)
-find_package(unofficial-minizip REQUIRED) # also wtf
+find_package(unofficial-minizip REQUIRED)
 find_path(LXW_INCLUDE_DIRS xlsxwriter.h)
 find_library(LXW_LIBRARIES xlsxwriter REQUIRED)
 
@@ -61,4 +61,21 @@ target_link_libraries(mhd2dcm
                       ${ITK_LIBRARIES})
 
 set_property(TARGET mhd2dcm
+    PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+
+add_executable(img2dcm img2dcm.c
+               ${CMAKE_SOURCE_DIR}/src/qagen-path.c
+               ${CMAKE_SOURCE_DIR}/src/qagen-error.c
+               ${CMAKE_SOURCE_DIR}/src/qagen-memory.c
+               ${CMAKE_SOURCE_DIR}/src/qagen-debug.c
+               ${CMAKE_SOURCE_DIR}/src/qagen-log.c
+               ${CMAKE_SOURCE_DIR}/src/qagen-img2dcm.cxx)
+
+target_link_libraries(img2dcm
+              PUBLIC  PathCch
+              PRIVATE DCMTK::DCMTK
+                      ${ITK_LIBRARIES})
+
+set_property(TARGET img2dcm
     PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")

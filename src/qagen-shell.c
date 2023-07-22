@@ -135,11 +135,17 @@ static int qagen_search_rs_folder(struct qagen_patient *pt,
 }
 
 
+/** Potentially adding support for LZW-compressed NIFTI files
+ *  Find 
+ */
+
+
 enum {
     MC2_SEARCH_ERROR = -1,
     MC2_SEARCH_FOUND_NONE,
     MC2_SEARCH_FOUND_DICOM,
-    MC2_SEARCH_FOUND_MHD
+    MC2_SEARCH_FOUND_MHD,
+    MC2_SEARCH_FOUND_NIFTI
 };
 
 

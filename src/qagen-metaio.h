@@ -2,6 +2,9 @@
 /** @file Function for converting MetaImage files to RTDose files on disk
  *  @todo Set the locale to the C locale during this operation, to guarantee
  *      that all strings are written using the correct character repertoire
+ * 
+ *  We're gonna keep this file, since MetaIO offers much greater exception
+ *  safety than the standard V-/ITK pipeline dreck
  */
 #ifndef QAGEN_METAIO_H
 #define QAGEN_METAIO_H

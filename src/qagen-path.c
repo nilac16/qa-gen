@@ -95,7 +95,19 @@ int qagen_path_join(PATH **root, const wchar_t *ext)
 void qagen_path_remove_filespec(PATH **path)
 {
     /* HRESULT hr; */
+
     PathCchRemoveFileSpec((*path)->buf, (*path)->buflen);
+    (*path)->pathlen = wcslen((*path)->buf);
+}
+
+
+void qagen_path_remove_extension(PATH **path)
+{
+    HRESULT hr;
+
+    do {
+        hr = PathCchRemoveExtension((*path)->buf, (*path)->buflen);
+    } while (hr == S_OK);
     (*path)->pathlen = wcslen((*path)->buf);
 }
 

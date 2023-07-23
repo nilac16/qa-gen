@@ -308,11 +308,12 @@ static void qagen_search_mc2_algorithm(struct qagen_patient *pt,
         switch (*state) {
         case MC2_SEARCH_ERROR:
         case MC2_SEARCH_FOUND_DICOM:
+        case MC2_SEARCH_FOUND_MHD:
+        case MC2_SEARCH_FOUND_NIFTI:
+            /* Accept anything */
             cont = false;
             break;
         case MC2_SEARCH_FOUND_NONE:
-        case MC2_SEARCH_FOUND_MHD:
-        case MC2_SEARCH_FOUND_NIFTI:
             cont = qagen_search_mc2_findnext(hfind, fdata, state);
             break;
         }

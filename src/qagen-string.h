@@ -23,11 +23,13 @@ typedef struct {
  *      when you are done with it. The buffer that contains this string is
  *      guaranteed to be exactly large enough to hold it (i.e. its size is
  *      equal to wcslen(str) + 1)
- *  @note This operation is not efficient with wchar_t strings
+ *  @todo See if Microsoft has a proper wide version of snprintf(3). swprintf(3)
+ *      does not share its size-calculating behavior when passed a NULL pointer
  */
 wchar_t *qagen_string_createf(const wchar_t *restrict fmt, ...);
 
 
+__declspec(deprecated) /* This is only used by the obsolete RP window */
 /** @todo A drastic rewrite of this algorithm
  *  @brief Concatenates formatted output to @p dst
  *  @param dst

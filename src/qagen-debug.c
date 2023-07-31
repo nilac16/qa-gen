@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "qagen-debug.h"
 #include "qagen-log.h"
 #include <DbgHelp.h>
@@ -34,10 +35,8 @@ static void qagen_debug_stackframe_init(STACKFRAME64 *frame, const CONTEXT *ctx)
 
 
 /** @brief This is reused */
-static void qagen_debug_symfromaddr(HANDLE              process,
-                                    const DWORD64       address,
-                                    DWORD64            *disp,
-                                    SYMBOL_INFOW       *syminfo)
+static void qagen_debug_symfromaddr(HANDLE   process, const DWORD64 address,
+                                    DWORD64 *disp,    SYMBOL_INFOW *syminfo)
 {
     if (!SymFromAddrW(process, address, disp, syminfo)) {
         wcscpy(syminfo->Name, L"???");
@@ -49,13 +48,13 @@ int qagen_debug_print_stack(const CONTEXT *ectx)
 {
     static const wchar_t *fmtlnno = L"   #%d: %#x <%s> (line %d)";
     static const wchar_t *fmtnoln = L"   #%d: %#x <%s>";
-    HANDLE process, thread;
     IMAGEHLP_LINEW64 line = { 0 };
     STACKFRAME64 frame = { 0 };
+    HANDLE process, thread;
+    SYMBOL_INFOW *syminfo;
     CONTEXT record;
     BOOL res;
     int i = 0;
-    SYMBOL_INFOW *syminfo;
 
     process = GetCurrentProcess();
     thread = GetCurrentThread();
@@ -88,11 +87,11 @@ int qagen_debug_print_stack(const CONTEXT *ectx)
  *      table is fixed size. If too many pointers are inserted, it does not
  *      react in any way, but issues warnings to log files when MEM_LOAD_CAP is
  *      exceeded
- *  @todo MAJOR: Rewrite the deletion algorithm to actually be correct :p
  */
 static struct {
     ULONG_PTR load;
     struct {
+        unsigned    psl;
         USHORT      nframe;
         void       *frame[MEM_TRACE_LEN];
         const void *addr;
@@ -100,41 +99,40 @@ static struct {
 } memtable = { 0 };
 
 
+/** @brief Simple pointer hash function
+ *  @returns A hash of @p addr
+ */
+static ULONG_PTR qagen_debug_memtable_hash(const void *addr)
+{
+    const ULONG_PTR prime = INT32_MAX;
+    ULONG_PTR res = (ULONG_PTR)addr * prime;
+
+    return res;
+}
+
+
 void qagen_debug_memtable_insert(const void *addr)
 {
-    size_t hash = (ULONG_PTR)addr % BUFLEN(memtable.table);
+    unsigned psl = 0;
+    size_t hash;
 
+    hash = qagen_debug_memtable_hash(addr) % BUFLEN(memtable.table);
     while (memtable.table[hash].addr) {
         if (memtable.table[hash].addr == addr) {
             qagen_log_printf(QAGEN_LOG_WARN, L"Memtable: Duplicate address %#x", addr);
             return;
         } else {
             hash = (hash + 1) % BUFLEN(memtable.table);
+            psl++;
         }
     }
+    memtable.table[hash].psl = psl;
     memtable.table[hash].addr = addr;
     memtable.table[hash].nframe = CaptureStackBackTrace(2, BUFLEN(memtable.table[hash].frame), memtable.table[hash].frame, NULL);
     memtable.load++;
     if (memtable.load > MEM_LOAD_CAP) {
         qagen_log_printf(QAGEN_LOG_WARN, L"Memtable: Load factor %u is dangerously high", memtable.load);
     }
-}
-
-
-/** @brief Helper function
- *  @details We need to keep searching if the pointer at @p next is hashed to
- *      a position earlier than @p idx. If there is no pointer at @p next, then
- *      we can break
- *  @param idx
- *      Index to be deleted
- *  @param next
- *      Index to be checked
- *  @returns true if we should continue searching for a replacement entry
- */
-static bool qagen_debug_memtable_propcmp(size_t idx, size_t next)
-{
-    return memtable.table[next].addr
-        && (ULONG_PTR)memtable.table[next].addr % BUFLEN(memtable.table) > idx;
 }
 
 
@@ -145,11 +143,15 @@ static bool qagen_debug_memtable_propcmp(size_t idx, size_t next)
 static void qagen_debug_memtable_propagate(size_t idx)
 {
     size_t next = idx;
+    unsigned psl = 0;
 
     do {
         next = (next + 1) % BUFLEN(memtable.table);
-    } while (qagen_debug_memtable_propcmp(idx, next));
+        psl++;
+    } while (memtable.table[next].addr && psl > memtable.table[next].psl);
+
     memcpy(&memtable.table[idx], &memtable.table[next], sizeof memtable.table[next]);
+    memtable.table[idx].psl -= psl;
     if (memtable.table[next].addr) {
         qagen_debug_memtable_propagate(next);
     }
@@ -158,8 +160,9 @@ static void qagen_debug_memtable_propagate(size_t idx)
 
 void qagen_debug_memtable_delete(const void *addr)
 {
-    size_t hash = (ULONG_PTR)addr % BUFLEN(memtable.table);
+    size_t hash;
 
+    hash = qagen_debug_memtable_hash(addr) % BUFLEN(memtable.table);
     while (memtable.table[hash].addr) {
         if (memtable.table[hash].addr == addr) {
             qagen_debug_memtable_propagate(hash);
@@ -175,8 +178,9 @@ void qagen_debug_memtable_delete(const void *addr)
 
 int qagen_debug_memtable_lookup(const void *addr)
 {
-    size_t hash = (ULONG_PTR)addr % BUFLEN(memtable.table);
+    size_t hash;
 
+    hash = qagen_debug_memtable_hash(addr) % BUFLEN(memtable.table);
     while (memtable.table[hash].addr) {
         if (memtable.table[hash].addr == addr) {
             return 1;

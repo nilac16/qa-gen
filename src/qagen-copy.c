@@ -331,6 +331,8 @@ static void qagen_copy_itk_complete(struct qagen_copy_ctx *ctx)
 
 /** @brief Converts the MHD/RAW files into DICOM files in the destination
  *      directory
+ *  @details At least, that's what it would do if there were any need in
+ *      practice to have this function
  *  @param ctx
  *      Copy context
  *  @param pt
@@ -347,7 +349,8 @@ static int qagen_copy_itk_dosebeams(struct qagen_copy_ctx *ctx,
     int res = 0;
 
     for (; itk && !res && !qagen_progdlg_cancelled(&ctx->pdlg); itk = itk->next) {
-        if (qagen_path_join(&pt->basepath, itk->name)) {
+        qagen_log_printf(QAGEN_LOG_ERROR, L"Skipping ITK Dose_Beam file %s", itk->name);
+        /* if (qagen_path_join(&pt->basepath, itk->name)) {
             return 1;
         }
         qagen_copy_itk_prepare(ctx, itk);
@@ -357,7 +360,7 @@ static int qagen_copy_itk_dosebeams(struct qagen_copy_ctx *ctx,
         qagen_path_remove_filespec(&pt->basepath);
         if (!res) {
             qagen_copy_itk_complete(ctx);
-        }
+        } */
     }
     return res;
 }

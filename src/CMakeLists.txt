@@ -9,7 +9,7 @@ set(QAGEN_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/qagen-files.c
     ${CMAKE_CURRENT_LIST_DIR}/qagen-dicom.cxx
     ${CMAKE_CURRENT_LIST_DIR}/qagen-metaio.cxx
-    ${CMAKE_CURRENT_LIST_DIR}/qagen-img2dcm.cxx
+    #${CMAKE_CURRENT_LIST_DIR}/qagen-img2dcm.cxx
     ${CMAKE_CURRENT_LIST_DIR}/qagen-filedlg.c
     ${CMAKE_CURRENT_LIST_DIR}/qagen-progdlg.c
     ${CMAKE_CURRENT_LIST_DIR}/qagen-rpwnd.c

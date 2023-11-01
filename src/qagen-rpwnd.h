@@ -33,7 +33,7 @@ enum {
  *  @param nstr
  *      Number of strings to display
  *  @param str
- *      Pointer to array of pointers to strings which are to be displayed
+ *      Array of pointers to strings which are to be displayed
  *  @returns A nonnegative integer corresponding to the user's choice, or a
  *      negative integer on failure. See the above enumeration for details
  */

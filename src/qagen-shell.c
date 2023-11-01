@@ -157,9 +157,9 @@ typedef enum {
 struct mc2_search_ctx {
     const wchar_t *ext;     /* The file extension, use a literal */
     const wchar_t *name;    /* The file type name, use a literal */
-    qagen_file_t type;      /* The file type used by my enumerator */
-    mc2_search_t state;     /* The state of the search on success */
-    uint32_t xpect;         /* The expected number of beams */
+    qagen_file_t   type;    /* The file type used by my enumerator */
+    mc2_search_t   state;   /* The state of the search on success */
+    uint32_t       xpect;   /* The expected number of beams */
 };
 
 
@@ -560,8 +560,7 @@ static void qagen_shell_select_json(struct qagen_patient    *pt,
     const struct qagen_file *jptr = jsonls;
 
     if (jptr) {
-        /* UGH, strncpy, GROSS */
-        /* wait why am I doing this */
+        /* Why *did* I use wcsncpy and not swprintf here? */
         wcsncpy(pt->jsonpath, jptr->path, BUFLEN(pt->jsonpath));
         jptr = jptr->next;
     }
@@ -622,7 +621,7 @@ static int qagen_shell_find_json(struct qagen_patient *pt,
                                  const PATH           *rspath,
                                  PATH                **mc2path)
 {
-    static const wchar_t *wildcard = L"*.json"; /* Oh god I hope FindFirstFile is not case-sensitive */
+    static const wchar_t *wildcard = L"*.json";
     struct qagen_file *jsonls;
     int res = 0;
     PATH *root;
@@ -645,8 +644,8 @@ static int qagen_shell_find_json(struct qagen_patient *pt,
 }
 
 
-/** @brief Initializes a patient context using the path @p rsstr, then searches for
- *  files, and attempts a transfer
+/** @brief Initializes a patient context using the path @p rsstr, then searches
+ *      for files, and attempts a transfer
  *  @note IMPORTANT: This function ***MUST*** return nonzero if an error
  *      occurred, OR if the user cancelled the operation. The caller will
  *      determine which from the thread's error state

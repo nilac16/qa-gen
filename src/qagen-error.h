@@ -1,9 +1,5 @@
 #pragma once
 /** @file This file manages the thread-local error state
- * 
- *  @note The error state is used to distinguish between cancelling an
- *      operation normally and due to error. If an error occurs, but you don't
- *      want to cancel the algorithm, *be sure to clear it before progressing*
  */
 #ifndef QAGEN_ERROR_H
 #define QAGEN_ERROR_H
@@ -14,11 +10,11 @@ EXTERN_C_START
 
 
 enum {
-    QAGEN_ERR_NONE,
-    QAGEN_ERR_WIN32,
-    QAGEN_ERR_HRESULT,
-    QAGEN_ERR_SYSTEM,
-    QAGEN_ERR_RUNTIME
+    QAGEN_ERR_NONE,     /* Clears the error state. All other args are ignored */
+    QAGEN_ERR_WIN32,    /* Source: GetLastError() */
+    QAGEN_ERR_HRESULT,  /* Source: Returned (and PASSED) HRESULT */
+    QAGEN_ERR_SYSTEM,   /* Source: errno */
+    QAGEN_ERR_RUNTIME   /* Source: YOU! */
 };
 
 
@@ -27,7 +23,6 @@ struct qagen_error {
     
     wchar_t context[128];   /* What we were doing when the error occurred */
     wchar_t message[128];   /* The library's message about the error */
-    /* wchar_t extra[128]; *//* More helpful information, maybe (consider it) */
 
     HRESULT hr;
     DWORD   dwerr;
@@ -58,17 +53,7 @@ struct qagen_error {
 void qagen_error_raise(int type, const void *data, const wchar_t *restrict fmt, ...);
 
 
-/** @todo Consider whether a function like this would be useful (yes probably).
- *      The tradeoff would be extra complexity in certain functions (but not as
- *      bad as try-catch spam in C++)
- *  @brief Changes the context string of the currently raised error
- *  @param fmt
- *      Format string specifying the new context
- */
-void qagen_error_set_context(const wchar_t *restrict fmt, ...);
-
-
-/** @brief Places the string pointers in its args
+/** @brief Fetch the current error strings
  *  @param ctx
  *      Location where the context string shall be written
  *  @param msg

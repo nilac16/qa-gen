@@ -88,8 +88,6 @@ int qagen_path_rename_extension(PATH **path, const wchar_t *ext);
  *  @param fdata
  *      WIN32_FIND_DATA used for searching subdirectories
  *  @returns true if the currently contained file is a subdirectory
- *  @note Is there any system on which current dir isn't '.', and parent dir is
- *      not '..'?
  */
 bool qagen_path_is_subdirectory(const WIN32_FIND_DATA *fdata);
 

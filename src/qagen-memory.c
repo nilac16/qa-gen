@@ -6,9 +6,7 @@
 #include "qagen-error.h"
 
 
-/** I *highly* suspect that I can use Microsoft's default allocator for this
- *  application
- */
+/** Nope, no(t really any) need for this in 2022 */
 /* static HANDLE hheap = INVALID_HANDLE_VALUE; */
 
 

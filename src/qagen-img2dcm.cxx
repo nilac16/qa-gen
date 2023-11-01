@@ -141,7 +141,7 @@ void ITKConverter::insert_pixels(const std::vector<pixel_t> &px)
 void ITKConverter::load_image(const wchar_t *path)
 {
     using reader_t = itk::ImageFileReader<image_t>;
-    reader_t::Pointer reader;   /* The default constructor is not noexcept, wtf */
+    reader_t::Pointer reader;   /* The default constructor isn't noexcept... */
     char buf[256];  /* We're just gonna do it this way */
 
     snprintf(buf, BUFLEN(buf), "%S", path);

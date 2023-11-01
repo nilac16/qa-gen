@@ -11,6 +11,7 @@ int qagen_metaio_convert(const wchar_t *restrict mhd,
                          const wchar_t *restrict tmplt)
 {
     static const wchar_t *failmsg = L"Failed to convert MHD to DICOM";
+
     try {
         MHDConverter cvtr(mhd, tmplt);
         cvtr.convert(dst);
@@ -99,6 +100,7 @@ void MHDConverter::load_template(const wchar_t *fname)
 void MHDConverter::load_mhd(const wchar_t *fname)
 {
     char buf[512];
+
     if (std::wcstombs(buf, fname, BUFLEN(buf)) == -1) {
         throw Exception(EILSEQ, L"Cannot convert MHD input path to UTF-8");
     }
@@ -119,6 +121,7 @@ void MHDConverter::convert_time(DcmDataset *dset)
     OFCondition stat;
     OFDateTime now;
     OFString date, time;
+
     if (!now.setCurrentDateTime()) {
         return;
     }
@@ -139,6 +142,7 @@ void MHDConverter::convert_uid(DcmDataset *dset)
     static const wchar_t *failmsg = L"MHD conversion: Failed to set output UIDs";
     char uid[64] = "2.16.840.999.999";  /* US prefix, with just 9's */
     OFCondition stat;
+
     stat = dset->putAndInsertString(DCM_SOPInstanceUID, uid);
     Exception::ofcheck(stat, failmsg);
     stat = dset->putAndInsertString(DCM_SeriesInstanceUID, uid);
@@ -164,6 +168,7 @@ void MHDConverter::convert_strings(DcmDataset *dset)
         DCM_DoseUnits
     };
     OFCondition stat;
+
     static_assert(BUFLEN(str) == BUFLEN(key));
     for (std::size_t i = 0; i < BUFLEN(str); i++) {
         stat = dset->putAndInsertString(key[i], str[i]);
@@ -179,6 +184,7 @@ void MHDConverter::convert_grid_frame_offset_vector(DcmDataset *dset)
     double pos = m_mhd.ElementSpacing(2);
     OFCondition stat;
     std::string gfov = "0";
+
     for (int i = 0; i < m_mhd.DimSize(2); i++) {
         std::sprintf(buf, "\\%g", pos);
         gfov += buf;
@@ -235,8 +241,9 @@ void MHDConverter::write_grid_scaling(DcmDataset *dset, DataT dosegridscaling)
 {
     char buf[17];   /* DS has a 16-byte maximum */
     OFCondition stat;
+
     static_assert(std::is_floating_point<DataT>::value);
-    std::sprintf(buf, "%1.10e", dosegridscaling);   /* Use _sprintf_l to guarantee that this is executed with the C locale */
+    std::sprintf(buf, "%1.10e", dosegridscaling);
     stat = dset->putAndInsertString(DCM_DoseGridScaling, buf);
     Exception::ofcheck(stat, L"MHD conversion: Failed to update DoseGridScaling");
 }
@@ -266,7 +273,7 @@ void MHDConverter::convert_pixels(DcmDataset *dset)
     OFCondition stat;
 
     write_grid_scaling(dset, dosegridscal);
-    dest = dstptr = new PixelT[n];  /* Everything in here is noexcept */
+    dest = dstptr = new PixelT[n];
     /* Write each frame backwards */
     dptr += framelen;
     for (int k = 0; k < m_mhd.DimSize(2); k++) {
@@ -292,7 +299,9 @@ MHDConverter::MHDConverter(const wchar_t *restrict mhd, const wchar_t *restrict 
 void MHDConverter::convert(const wchar_t *dst)
 {
     OFCondition stat;
-    DcmDataset *dset = m_dcfile.getDataset();
+    DcmDataset *dset;
+
+    dset = m_dcfile.getDataset();
     convert_time(dset);
     convert_uid(dset);
     convert_strings(dset);

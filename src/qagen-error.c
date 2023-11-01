@@ -83,7 +83,7 @@ void qagen_error_raise(int type, const void *data, const wchar_t *restrict fmt, 
         va_start(args, fmt);
         vswprintf(error.message, BUFLEN(error.message), fmt, args);
         va_end(args);
-        return; /* Unclean hack */
+        return;
     }
     va_start(args, fmt);
     vswprintf(error.context, BUFLEN(error.context), fmt, args);

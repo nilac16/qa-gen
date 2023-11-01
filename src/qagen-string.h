@@ -7,14 +7,6 @@
 #include "qagen-defs.h"
 
 
-/* Consider it. It may be the solution to the concatf problem
-typedef struct {
-    size_t  strlen;
-    size_t  buflen;
-    wchar_t buf[];
-} STRING; */
-
-
 /** @brief Creates a formatted string on the heap
  *  @param fmt
  *      Format string
@@ -41,8 +33,8 @@ __declspec(deprecated) /* This is only used by the obsolete RP window */
  *  @param fmt
  *      Format string to be concatenated
  *  @returns Nonzero on error. On error, the contents of @p dst are undefined
- *  @note This is a rather complicated operation, and should be avoided if
- *      an evidently efficient solution exists
+ *  @note This is a very inefficient function, and you should avoid it wherever
+ *      possible
  */
 int qagen_string_concatf(wchar_t       *restrict *dst,
                          size_t                  *dstcount,

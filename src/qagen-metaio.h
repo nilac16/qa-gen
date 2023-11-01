@@ -20,7 +20,8 @@ EXTERN_C_START
  *  @param dst
  *      Path to destination DICOM file
  *  @param tmplt
- *      Path to DICOM template file (I plan to make this optional)
+ *      Path to DICOM template file (remember, use a TPS dose file if a template
+ *      cannot be found)
  *  @returns Nonzero on error
  *  @note @p dst should be the *exact* path to the output file, including the
  *      desired file extension
@@ -89,10 +90,6 @@ private:
     template <class DataT>
     void write_grid_scaling(DcmDataset *dset, DataT dosegridscaling);
 
-    /* This template is complete. *Do* note that more of this class will need
-    to change in order to accomodate different raw data/output pixel formats.
-    Ultimately, detection and handling of arbitrary formats cannot be done with
-    a template class/function */
     template <class DataT, class PixelT>
     void convert_pixels(DcmDataset *dset);
 

@@ -1,6 +1,3 @@
-/** It appears that I just didn't feel like commenting the static functions in
- *  this file in a meaningful way...
- */
 #include <assert.h>
 #include <setjmp.h>
 #include <stdio.h>
@@ -491,21 +488,6 @@ static int qagen_json_dfs(struct qagen_patient *pt,
     }
     json_object_object_foreach(node, key, val) {
         switch (json_object_get_type(val)) {
-        /* omg im such a hack wtf */
-        /* case json_type_array:
-            n = json_object_array_length(val);
-            for (i = 0; i < n && !res; i++) {
-                val = json_object_array_get_idx(val, i);
-                switch (json_object_get_type(val)) {
-                case json_type_object:
-                    res = qagen_json_dfs(pt, val, remky, remct);
-                    break;
-                default:
-                    res = qagen_json_dfs_keycheck(pt, remky, remct, key, val);
-                    break;
-                }
-            }
-            break; */
         case json_type_object:
             res = qagen_json_dfs(pt, val, remky, remct);
             break;
@@ -555,11 +537,10 @@ static int qagen_json_load(struct qagen_patient *pt, json_object *root)
  *  @returns A pointer to the relevant node, or NULL if not found
  */
 static json_object *qagen_json_dfs_single(json_object *root, const char *key)
-/* this is kinda gross */
 {
     json_object *res = NULL;
 
-    json_object_object_foreach(root, k, v) {    /* Yeah that won't be confusing later */
+    json_object_object_foreach(root, k, v) {
         if (json_object_get_type(v) == json_type_object) {
             res = qagen_json_dfs_single(v, key);
         } else {

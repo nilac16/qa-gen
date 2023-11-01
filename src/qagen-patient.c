@@ -114,7 +114,7 @@ static int qagen_patient_tokenize(struct qagen_patient *pt,
 }
 
 
-/** @brief Dangerous (just be careful lol)
+/** @brief Dangerous
  *  @note Actually tho, this writes to the first two indices in the worst case,
  *      none in the "best," so make sure that @p dst has at least 3 more spaces
  */
@@ -224,7 +224,7 @@ static wchar_t *qagen_patient_splice_name(wchar_t *full)
 }
 
 
-/** @brief Half-ass validates information read from a JSON file
+/** @brief Fix the information read from the JSON if needed
  *  @param pt
  *      Patient context
  */
@@ -257,15 +257,12 @@ int qagen_patient_init(struct qagen_patient *pt,    wchar_t *dpyname,
         if (qagen_json_read(pt, pt->jsonpath)) {
             return 1;
         }
-        /* validate the json, it is often exported incorrectly */
         qagen_patient_validate_postjson(pt);
     } else {
         if (qagen_patient_tokenize(pt, dpyname)) {
             return 1;
         }
     }
-    /* if (qagen_patient_tokenize(pt, dpyname)
-     || */
     if (qagen_patient_generate_foldername(pt)) {
         return 1;
     } else {
@@ -384,8 +381,7 @@ static int qagen_patient_write_json(const struct qagen_patient *pt,
                           NULL);
             qagen_log_printf(QAGEN_LOG_WARN, L"Failed to copy JSON: %#x: %s", GetLastError(), buf);
         }
-        return 0;   /* omfg this was missing the whole time and Visual C didn't
-                    emit any warnings or ANYTHING */
+        return 0;
     } else {
         return qagen_json_write(pt, dst);
     }
@@ -411,7 +407,7 @@ static int qagen_patient_create_json(struct qagen_patient *pt)
 
 static int qagen_patient_create_excel(struct qagen_patient *pt)
 {
-    wchar_t buf[26]; /* The max possible for this locale (doesn't even matter because swprintf is bounds-checked anyway, oh well) */
+    wchar_t buf[26];
     int res = 1;
 
     swprintf(buf, BUFLEN(buf), L"QA_%uFields.xlsx", qagen_patient_num_beams(pt));

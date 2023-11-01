@@ -82,6 +82,7 @@ DCMReader::Exception::Exception(OFCondition stat, const wchar_t *msg)
 {
     std::wstring str;
     size_t len;
+
     len = std::mbstowcs(NULL, stat.text(), 0);
     if (len != (size_t)-1) {
         str.resize(len + 1);
@@ -97,6 +98,7 @@ void DCMReader::Exception::ofcheck(OFCondition stat, const wchar_t *restrict fmt
 {
     wchar_t buf[256];
     std::va_list args;
+
     if (stat.bad()) {
         va_start(args, fmt);
         std::vswprintf(buf, BUFLEN(buf), fmt, args);
@@ -127,6 +129,7 @@ void RPReader::read_sop_instance_uid(void)
     static const wchar_t *failmsg = L"Failed to get SOP instance UID from RTPlan";
     OFCondition stat;
     const char *res;
+
     stat = m_dset->findAndGetString(DCM_SOPInstanceUID, res);
     Exception::ofcheck(stat, failmsg);
     std::strcpy(m_rp->sop_inst_uid, res);
@@ -139,6 +142,7 @@ void RPReader::read_number_of_beams(void)
     OFCondition stat;
     DcmItem *item;
     Sint32 res;
+
     stat = m_dset->findAndGetSequenceItem(DCM_FractionGroupSequence, item);
     Exception::ofcheck(stat, failmsg);
     stat = item->findAndGetSint32(DCM_NumberOfBeams, res);
@@ -149,7 +153,9 @@ void RPReader::read_number_of_beams(void)
 
 void RPReader::alloc_beams(void)
 {
-    void *ptr = qagen_malloc(sizeof *m_rp->beam * m_rp->nbeams);
+    void *ptr;
+    
+    ptr = qagen_malloc(sizeof *m_rp->beam * m_rp->nbeams);
     if (ptr) {
         m_rp->beam = reinterpret_cast<struct qagen_rtplan::qagen_rtbeam *>(ptr);
     } else {
@@ -173,6 +179,7 @@ void RPReader::alloc_beams(void)
 static void null_mbstowcs(wchar_t dst[], const char *src, size_t n)
 {
     static const char nulterm = '\0';
+
     src = (src) ? src : &nulterm;
     std::mbstowcs(dst, src, n);
 }
@@ -226,6 +233,7 @@ void RPReader::read_beams(void)
     static const wchar_t *failfmt = L"Failed to read beam %u from RTPlan";
     OFCondition stat;
     DcmItem *item;
+
     for (std::uint32_t i = 0; i < m_rp->nbeams; i++) {
         stat = m_dset->findAndGetSequenceItem(DCM_IonBeamSequence, item, i);
         Exception::ofcheck(stat, failfmt, i + 1);
@@ -248,6 +256,7 @@ void RDReader::read_referenced_sop_instance(DcmItem *refrpseq)
     static const wchar_t *failmsg = L"Failed to get ReferencedSOPInstanceUID from RTDose";
     OFCondition stat;
     const char *res;
+
     stat = refrpseq->findAndGetString(DCM_ReferencedSOPInstanceUID, res);
     Exception::ofcheck(stat, failmsg);
     std::strcpy(m_rd->sop_inst_ref_uid, res);

@@ -19,20 +19,11 @@
 #include <Windows.h>
 
 
-/** Make sure that I'm using my wrappers, so I can track allocations */
-/* #if !defined(QAGEN_MEMORY_IMPLEMENTATION_FILE)
-#   pragma deprecated(malloc)
-#   pragma deprecated(calloc)
-#   pragma deprecated(realloc)
-#   pragma deprecated(free)
-#endif */
-
-
 /** C should have had a keyword for this long ago */
 #define BUFLEN(buf) (sizeof (buf) / sizeof *(buf))
 
 
-/** "Extensions" implementing standard features? Only Microsoft */
+/** "Extensions" implementing standard features? */
 #define restrict __restrict
 
 
@@ -40,16 +31,6 @@
 #include <stdbool.h>
 
 
-/** I'm going to try not to use longjmp this time */
-/** Which means I might not need this, so nobody but I should be reading this */
-#if __has_include(<stdnoreturn.h>)
-#   include <stdnoreturn.h>
-#else
-#   define noreturn __declspec(noreturn)
-#endif
-
-
-/** The day is coming that MSVC recognizes this as true */
 #if __has_include(<threads.h>)
 #   include <threads.h>
 #else

@@ -8,17 +8,8 @@
 #include "qagen-defs.h"
 
 
-/** Internal note: Distinguish between four states, despite the cardinality of
- *  the result enum
- *   - Closed: User closed: Exit the application without prompt
- *   - Normal: Operation completed normally, ask to continue
- *   - Error:  Display an error message, ask to continue
- *  But also
- *   - Cancel: User cancelled the operation somehow, ask to continue
- * 
- *  If the user cancels the operation, it will be indistinguishable from normal
- *  state to the enclosing scope, but it will have to be propagated within this
- *  file
+/** Use SHELL_NORMAL if the user cancels the transfer
+ *  This may be done if the wrong patient is selected by accident
  */
 
 

@@ -1,9 +1,9 @@
+/** Fixes to the DICOM exporter have rendered this file defunct */
 #include "qagen-app.h"
 #include "qagen-log.h"
 #include "qagen-error.h"
 #include <CommCtrl.h>
 
-/** C4100: Anything to stop the incessant howling */
 #pragma warning(disable: 4100)
 
 #define IDRPWND_LBOX    101

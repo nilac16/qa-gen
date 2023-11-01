@@ -1,14 +1,3 @@
-/** This file is rapidly becoming the same disaster as the plotting code in 
- *  the shift app
- * 
- *  If you are reading this, and you didn't write this, TURN BACK
- * 
- *  This file has already become an archaeological mystery, even to myself
- */
-
-/** I am NOT picking through this file to unmix declarations and code. How did I
- *  ever rationalize to myself that initializing with a function was OK?
- */
 #include <inttypes.h>
 #include <math.h>
 #include <limits.h>
@@ -229,9 +218,9 @@ struct report {
  *      pointer would be expected.
  *  @note Passing string literals to this function requires passing a pointer
  *      to their static storage. If you place a string literal in the FMTARG
- *      macro, Microsoft "helpfully" (doesn't happen with GCC) expands it to
- *      the size of the STRING and not the POINTER to it. Pass string literals
- *      like this: FMTARG(func, &(*(<literal>)))
+ *      macro, sizeof will expand to the size of the static array containing it.
+ *      Pass them by derefing them and then taking the address, e.g.
+ *                              &(*("String"))
  *  @param wb
  *      LXW workbook used to allocate the format
  *  @returns An LXW format object with the specified variadic attributes
@@ -299,8 +288,8 @@ static void qagen_excel_draw_header_logo(lxw_worksheet *sheet)
 }
 
 
-/** Draws a header on the first 9 columns of the document (spans the entire 
- *  default width). The left section always contains the SKCCC logo. This 
+/** Draws a header on the first 9 columns of the document (spans the entire
+ *  default width). The left section always contains the SKCCC logo. This
  *  is always drawn at the origin. Spans 4 rows
  *  \param app
  *      Application state
@@ -313,7 +302,7 @@ static void qagen_excel_draw_header_logo(lxw_worksheet *sheet)
  *  \param fg
  *      Foreground (text) color of the central header
  *  \param brdr
- *      Color of the header's external border. The central section is always 
+ *      Color of the header's external border. The central section is always
  *      bounded by two gray borders
  *  \param title
  *      Upper string to be written to the central header section
@@ -403,6 +392,7 @@ static void qagen_excel_draw_pt_info_copied(struct report *rpt,
                                             lxw_format    *flbl)
 {
     char formula[128];
+
     worksheet_merge_range(sheet, row + 0, 2, row + 0, 4, "", flbl);
     rpt_vec_fmt_range(formula, MU_RANGE, rpt->pt.loc.name);
     worksheet_write_formula(sheet, row + 0, 2, formula, flbl);
@@ -430,6 +420,7 @@ static void qagen_excel_draw_pt_info_copied(struct report *rpt,
 static lxw_conditional_format *qagen_excel_format_ptscript(lxw_workbook *wb)
 {
     static lxw_conditional_format condf;    /* Does this actually need persistent storage???? */
+
     memset(&condf, 0, sizeof condf);
     condf.type   = LXW_CONDITIONAL_TYPE_BLANKS;
     condf.format = qagen_excel_format_create(wb,
@@ -446,7 +437,9 @@ static void qagen_excel_draw_pt_info_direct(const struct qagen_patient   *pt,
                                             lxw_format             *flbl)
 {
     char utf8buf[128];
-    lxw_conditional_format *rxlbl = qagen_excel_format_ptscript(rpt->wb);
+    lxw_conditional_format *rxlbl;
+
+    rxlbl = qagen_excel_format_ptscript(rpt->wb);
     snprintf(utf8buf, sizeof utf8buf, "%S, %S", pt->tokens[PT_TOK_LNAME], pt->tokens[PT_TOK_FNAME]);
     rpt_vec_range(rpt->pt.loc.name, row + 0, 2, row + 0, 4);
     worksheet_merge_range(sheet, row + 0, 2, row + 0, 4, utf8buf, flbl);
@@ -494,8 +487,8 @@ static void qagen_excel_draw_pt_info_direct(const struct qagen_patient   *pt,
  *      Index of first row to draw the table in. The column is implicitly
  *      column zero
  *  \param scpy
- *      Specifies whether the patient information will be written to the 
- *      table. If true, it will be copied from the sheet labeled "MU check," 
+ *      Specifies whether the patient information will be written to the
+ *      table. If true, it will be copied from the sheet labeled "MU check,"
  *      otherwise, it will be written directly
  */
 static void qagen_excel_draw_pt_info(const struct qagen_patient *pt,
@@ -540,6 +533,7 @@ static void qagen_excel_draw_field_col(const struct qagen_rtbeam *beam,
                                        bool                       scpy)
 {
     char utf8buf[128];
+
     if (scpy) {
         sprintf(utf8buf, MU_CELL, col + 'A', row - 2);
         worksheet_write_formula(sheet, row + 0, col, utf8buf, fmt[0]);
@@ -570,8 +564,8 @@ static void qagen_excel_draw_field_col(const struct qagen_rtbeam *beam,
  *      Index of first row to draw the table in. The column is implicitly
  *      column zero
  *  \param scpy
- *      Specifies whether the patient information will be written to the 
- *      table. If true, it will be copied from the sheet labeled "MU check," 
+ *      Specifies whether the patient information will be written to the
+ *      table. If true, it will be copied from the sheet labeled "MU check,"
  *      otherwise, it will be written directly
  */
 static void qagen_excel_draw_field_info(const struct qagen_patient *pt,
@@ -582,6 +576,7 @@ static void qagen_excel_draw_field_info(const struct qagen_patient *pt,
 {
     lxw_format **lbl[2] = { &rpt->flds.lbls[0], &rpt->flds.lbls[3] };
     int i;
+
     worksheet_set_row(sheet, rstart + 0, ROW_LONG, NULL);
     worksheet_set_row(sheet, rstart + 1, ROW_LONG, NULL);
     worksheet_set_row(sheet, rstart + 2, ROW_LONG, NULL);
@@ -603,6 +598,7 @@ static void qagen_excel_draw_depth_row(struct report *rpt,
                                        lxw_row_t      row)
 {
     int i;
+
     worksheet_merge_range(sheet, row, 0, row, 1, RES_DEPTH, rpt->beams.blbl1);
     for (i = 0; i < rpt->nbeams - 1; i++) {
         worksheet_write_blank(sheet, row, i + 2, rpt->beams.lbls1[i % 2]);
@@ -616,6 +612,7 @@ static void qagen_excel_draw_pctgp_row(struct report *rpt,
                                        lxw_row_t      row)
 {
     int i;
+
     worksheet_merge_range(sheet, row, 0, row, 1, RES_GP, rpt->beams.blbl3);
     for (i = 0; i < rpt->nbeams - 1; i++) {
         worksheet_write_blank(sheet, row, i + 2, rpt->beams.lbls3[i % 2]);
@@ -626,7 +623,7 @@ static void qagen_excel_draw_pctgp_row(struct report *rpt,
 }
 
 
-/** Draws a MU check result table row for a single depth. Spans 2 rows, but 
+/** Draws a MU check result table row for a single depth. Spans 2 rows, but
  *  modifies the row directly above (shortens it)
  */
 static void qagen_excel_draw_mu_row(struct report *rpt,
@@ -641,14 +638,13 @@ static void qagen_excel_draw_mu_row(struct report *rpt,
 }
 
 
-/** Draws the MU check result table. Spans 9 rows, and modifies the row above 
+/** Draws the MU check result table. Spans 9 rows, and modifies the row above
  *  its starting index (shortens it)
  */
 static void qagen_excel_draw_mu_table(struct report *rpt,
                                       lxw_worksheet *sheet,
                                       lxw_row_t      rstart)
 {
-    
     qagen_excel_draw_mu_row(rpt, sheet, rstart + 0);
     qagen_excel_draw_mu_row(rpt, sheet, rstart + 3);
     qagen_excel_draw_mu_row(rpt, sheet, rstart + 6);
@@ -744,6 +740,7 @@ static void qagen_excel_draw_slice_row(struct report *rpt,
 {
     char formula[128];
     int i;
+
     worksheet_merge_range(sheet, row, 0, row, 1, RES_SLICE, rpt->beams.blbl2);
     for (i = 0; i < rpt->nbeams - 1; i++) {
         sprintf(formula, ISO_CELL, i + 2 + 'A', row);
@@ -788,6 +785,7 @@ static void qagen_excel_draw_change_check(struct report *rpt,
                             FMTARG(format_set_bottom, LXW_BORDER_MEDIUM),
                             NULL);
     int i;
+
     worksheet_merge_range(sheet, rstart + 1, 0, rstart + 1, 1, CCK_LABEL,
         qagen_excel_format_create(rpt->wb,
             FMTARG(format_set_font_color, CCHKFG),
@@ -821,7 +819,7 @@ static void qagen_excel_draw_change_check(struct report *rpt,
 }
 
 
-static void qagen_excel_draw_figure(struct report  *rpt, 
+static void qagen_excel_draw_figure(struct report  *rpt,
                                     lxw_worksheet  *sheet,
                                     struct rpt_vec *org,
                                     struct rpt_vec *size,
@@ -830,6 +828,7 @@ static void qagen_excel_draw_figure(struct report  *rpt,
     char formula[128];
     lxw_row_t i;
     lxw_col_t j;
+
     rpt_vec_fmt_cell(formula, "=%c%d", ref);
     worksheet_write_formula(sheet, org->row - 1, org->col, formula, rpt->fig.cap);
 
@@ -856,6 +855,7 @@ static void qagen_excel_draw_figures(struct report *rpt,
                                      int            nbeams)
 {
     struct rpt_vec org, width, ref;
+
     if (nbeams > 2) {
         rpt_vec_cell(&org, 39, 0);
         rpt_vec_cell(&width, 13, 4);
@@ -964,13 +964,13 @@ static void qagen_excel_report_init_ptfmt(struct report *rpt)
                         FMTARG(format_set_align, LXW_ALIGN_CENTER),
                         FMTARG(format_set_num_format, &(*("0.00"))),
                         NULL);
-    rpt->pt.border.lo = qagen_excel_format_create(rpt->wb, 
+    rpt->pt.border.lo = qagen_excel_format_create(rpt->wb,
                             FMTARG(format_set_bottom, LXW_BORDER_MEDIUM),
                             NULL);
-    rpt->pt.border.hi = qagen_excel_format_create(rpt->wb, 
+    rpt->pt.border.hi = qagen_excel_format_create(rpt->wb,
                             FMTARG(format_set_top, LXW_BORDER_MEDIUM),
                             NULL);
-    rpt->pt.border.lt = qagen_excel_format_create(rpt->wb, 
+    rpt->pt.border.lt = qagen_excel_format_create(rpt->wb,
                             FMTARG(format_set_left, LXW_BORDER_MEDIUM),
                             NULL);
 }
@@ -980,7 +980,9 @@ static lxw_format *qagen_excel_format_fldlbl(lxw_workbook *wb,
                                              lxw_color_t   brdr,
                                              lxw_color_t   txt)
 {
-    lxw_format *res = workbook_add_format(wb);
+    lxw_format *res;
+    
+    res = workbook_add_format(wb);
     format_set_border_color(res, brdr);
     format_set_left(res, LXW_BORDER_MEDIUM);
     format_set_align(res, LXW_ALIGN_RIGHT);
@@ -1075,6 +1077,7 @@ static void qagen_excel_get_beam_format(lxw_workbook *wb,
 static lxw_conditional_format *qagen_excel_format_pctgp(lxw_workbook *wb)
 {
     static lxw_conditional_format condf;
+
     memset(&condf, 0, sizeof condf);
     condf.type      = LXW_CONDITIONAL_TYPE_CELL;
     condf.criteria  = LXW_CONDITIONAL_CRITERIA_NOT_BETWEEN;
@@ -1227,6 +1230,7 @@ int qagen_excel_write(const struct qagen_patient *pt, const wchar_t *filename)
 {
     char fcvt[512];
     int res;
+
     if (wcstombs(fcvt, filename, sizeof fcvt) == (size_t)-1) {
         qagen_error_raise(QAGEN_ERR_SYSTEM, &(const int){ EILSEQ }, L"Failed to convert %s to UTF-8", filename);
         return 1;

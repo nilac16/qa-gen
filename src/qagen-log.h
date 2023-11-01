@@ -36,8 +36,8 @@ struct qagen_log {
 
 /** @brief Emplaces the log structure @p log at the head of the log list
  *  @param log
- *      Log file context structure to be added. The caller is resposible for
- *      its memory
+ *      Log file context structure to be added. *The caller is resposible for
+ *      its memory*
  *  @returns Nonzero on error
  */
 int qagen_log_add(struct qagen_log *log);

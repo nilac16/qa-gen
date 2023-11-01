@@ -89,6 +89,8 @@ int qagen_debug_print_stack(const CONTEXT *ectx)
  *      exceeded
  */
 static struct {
+    ULONG_PTR psl_len, psl_net;
+
     ULONG_PTR load;
     struct {
         unsigned    psl;
@@ -102,10 +104,10 @@ static struct {
 /** @brief Simple pointer hash function
  *  @returns A hash of @p addr
  */
-static ULONG_PTR qagen_debug_memtable_hash(const void *addr)
+static size_t qagen_debug_memtable_hash(const void *addr)
 {
-    const ULONG_PTR prime = INT32_MAX;
-    ULONG_PTR res = (ULONG_PTR)addr * prime;
+    const size_t prime = INT32_MAX;
+    size_t res = (size_t)addr * prime;
 
     return res;
 }
@@ -126,6 +128,8 @@ void qagen_debug_memtable_insert(const void *addr)
             psl++;
         }
     }
+    memtable.psl_net += psl;
+    memtable.psl_len++;
     memtable.table[hash].psl = psl;
     memtable.table[hash].addr = addr;
     memtable.table[hash].nframe = CaptureStackBackTrace(2, BUFLEN(memtable.table[hash].frame), memtable.table[hash].frame, NULL);
@@ -232,6 +236,7 @@ void qagen_debug_memtable_log_extant(void)
         }
     }
     qagen_log_printf(QAGEN_LOG_DEBUG, L"Memtable: %u extant pointer%s", count, PLFW(count));
+    qagen_log_printf(QAGEN_LOG_DEBUG, L"Memtable: Average probe sequence length: %.2f across %u insertions", (double)memtable.psl_net / (double)memtable.psl_len, memtable.psl_len);
     if (count != memtable.load) {
         qagen_log_printf(QAGEN_LOG_ERROR, L"Memtable: Extant count %u differs from load factor %u", count, memtable.load);
     }

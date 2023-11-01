@@ -107,12 +107,11 @@ private:
 
     void insert_pixels(const std::vector<pixel_t> &px);
 
-    /** Catch ITK's polymorphic exception from this, I have no idea what
-     *  exceptions ITK throws nor when...
+    /** Catch ITK's polymorphic exception from this, if it even throws, idk
      */
     void load_image(const wchar_t *path);
 
-    /** DCMTK is much better about its exceptions, don't catch from this */
+    /** This uses DCMTK, don't catch from this */
     void load_template(const wchar_t *path);
 
     void write_datetime() noexcept; /* Fails silently */

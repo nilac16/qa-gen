@@ -55,16 +55,6 @@ int qagen_app_run(void);
 void qagen_app_close(void);
 
 
-/** @brief Fetches the static application state pointer
- *  @returns The application state pointer. Do note that this is only nonnull
- *      while the application is running (i.e. after a call to qagen_app_open,
- *      but before the call to qagen_app_close)
- *  @note Do we really need this? The only application-scope data that is
- *      needed outside of this file is the instance handle
- */
-/* struct qagen_app *qagen_app_ptr(void); */
-
-
 /** @brief Fetches the application instance handle
  *  @returns The HINSTANCE for this application
  *  @note This function supersedes qagen_app_ptr because this is the only

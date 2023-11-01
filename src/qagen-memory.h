@@ -1,9 +1,6 @@
 #pragma once
 /** @file Memory management functions, mostly identical to their stdlib
- *      counterparts, but raise a thread-local error on... error
- *  @note Raising errors from these functions makes the error messages
- *      displayed to the used ***much*** less helpful... but I don't design
- *      applications to recover from OOM situations anymore anyway
+ *      counterparts, but raise a thread-local error state on failure
  */
 #ifndef QAGEN_MEMORY_H
 #define QAGEN_MEMORY_H
@@ -44,6 +41,8 @@ void *qagen_calloc(size_t nmemb, size_t size);
  *      Number of bytes to be reallocated
  *  @returns If @p size is not zero, a pointer to the newly reallocated block,
  *      or NULL on failure
+ *  @todo Make sure that... Microsoft doesn't implement C23 behavior... or this
+ *      function will need some attention
  */
 void *qagen_realloc(void *addr, size_t size);
 
@@ -56,9 +55,7 @@ void *qagen_realloc(void *addr, size_t size);
 void qagen_free(void *addr);
 
 
-/** @brief Securely zeroes the memory at @p addr, then frees it. This is
- *      intended to be used with patient information, FWIW, but DCMTK uses
- *      whatever allocator, and I'm writing files with patient info, so...
+/** @brief Securely zeroes the memory at @p addr, then frees it
  *  @param addr
  *      Block to be zeroed. May be NULL (nops if it is)
  *  @note This function uses Microsoft's _msize to fetch the size of the block

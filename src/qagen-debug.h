@@ -1,9 +1,6 @@
 #pragma once
-/** @file Various debugging utilities (it's the bits of GDB that I just can't
- *      seem to find on Windows)
- * 
- *      Consider making this into an injectable DLL, this code isn't really
- *      necessary on release builds, and I'm compiling it in anyway
+/** @file Various debugging utilities (i.e. it's some GDB functionality built
+ *      in to the application)
  */
 #ifndef QAGEN_DEBUG_H
 #define QAGEN_DEBUG_H

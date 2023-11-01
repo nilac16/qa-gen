@@ -1,15 +1,5 @@
 #pragma once
-/** @file This file handles the... files that we are concerned with
- * 
- *  @todo The behavior of this API needs to be hardened. I anticipate that
- *      malformed DICOM files will cause the entire algorithm to terminate with
- *      an error state. We should simply ignore files that cannot be loaded,
- *      but log a warning that a file was skipped.
- *      
- *      I think this should also account for system errors. This file perhaps
- *      should not be raising application errors at all, or they should be
- *      cleared after calling
- */
+
 #ifndef QAGEN_FILE_H
 #define QAGEN_FILE_H
 

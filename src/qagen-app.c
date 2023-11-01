@@ -35,12 +35,7 @@ static int qagen_app_init_log(void)
 }
 
 
-/** This is kind of a dumb hack: Because I store the exe on the network, and I
- *  don't want it to exert needless filesystem pressure on the remote server, I
- *  forbid running this from *ANY* remote drive...
- *  This is not exactly inline with my UX principles, so I need to come up with
- *  a better solution
- */
+/** @brief Issue a warning if this application is run from network storage */
 static int qagen_app_check_cwd(void)
 {
     static const wchar_t *fmt = L"GetDriveType: %s";

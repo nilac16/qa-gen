@@ -856,6 +856,10 @@ static void qagen_excel_draw_figures(struct report *rpt,
 {
     struct rpt_vec org, width, ref;
 
+    if (nbeams > 6) {
+        qagen_log_printf(QAGEN_LOG_ERROR, L"Patient has %d beams!", nbeams);
+        qagen_log_puts(QAGEN_LOG_ERROR, L"Report form will be incorrect!");
+    }
     if (nbeams > 2) {
         rpt_vec_cell(&org, 39, 0);
         rpt_vec_cell(&width, 13, 4);

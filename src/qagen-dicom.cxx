@@ -182,6 +182,7 @@ static void null_mbstowcs(wchar_t dst[], const char *src, size_t n)
 
     src = (src) ? src : &nulterm;
     std::mbstowcs(dst, src, n);
+    dst[n - 1] = L'\0'; /* FFS */
 }
 
 

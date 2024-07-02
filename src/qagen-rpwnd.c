@@ -141,6 +141,7 @@ static int qagen_rpwnd_set_font(struct qagen_rpwnd *wnd)
     static const wchar_t *failmsg = L"Failed to fetch nonclient area scalable metrics";
     NONCLIENTMETRICS mt = { .cbSize = sizeof mt };
     HFONT font;
+
     if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, 0, &mt, 0)) {
         font = CreateFontIndirect(&mt.lfMessageFont);
         SendMessage(wnd->hlabel, WM_SETFONT, (WPARAM)font, 0);
@@ -157,9 +158,11 @@ static int qagen_rpwnd_set_font(struct qagen_rpwnd *wnd)
 static LRESULT CALLBACK qagen_rpwnd_create(HWND   hwnd,   UINT   msg,
                                            WPARAM wparam, LPARAM lparam)
 {
-    CREATESTRUCT *const cstruct = (CREATESTRUCT *)lparam;
-    struct qagen_rpwnd *const wnd = (struct qagen_rpwnd *)cstruct->lpCreateParams;
-    HINSTANCE inst = qagen_app_instance();
+    CREATESTRUCT *cstruct = (CREATESTRUCT *)lparam;
+    struct qagen_rpwnd *wnd = (struct qagen_rpwnd *)cstruct->lpCreateParams;
+    HINSTANCE inst;
+
+    inst = qagen_app_instance();
     SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)wnd);
     if (qagen_rpwnd_create_label(wnd, inst, hwnd)
      || qagen_rpwnd_create_listbox(wnd, inst, hwnd)
@@ -303,7 +306,9 @@ static LRESULT CALLBACK qagen_rpwnd_proc(HWND   hwnd,   UINT   msg,
 static HCURSOR qagen_load_cursor(void)
 {
     static const wchar_t *failmsg = L"Failed to load cursor for RP window";
-    HCURSOR res = LoadCursor(NULL, IDC_ARROW);
+    HCURSOR res;
+
+    res = LoadCursor(NULL, IDC_ARROW);
     if (!res) {
         qagen_error_raise(QAGEN_ERR_WIN32, NULL, failmsg);
     }
@@ -343,6 +348,7 @@ static int qagen_rpwnd_register(void)
         .lpszClassName = qagen_rpwnd_classname(),
         .hIconSm       = NULL
     };
+
     class_atom = RegisterClassEx(&wcex);
     if (!class_atom) {
         if (!qagen_error_state()) {
@@ -374,6 +380,7 @@ static int qagen_rpwnd_create_window(struct qagen_rpwnd *wnd)
 {
     static const wchar_t *failmsg = L"Failed to create RTPlan window";
     static const wchar_t *caption = L"Select RTPlan";
+
     wnd->htoplevel = CreateWindow((const wchar_t *)class_atom,
                                   caption,
                                   WS_OVERLAPPEDWINDOW,

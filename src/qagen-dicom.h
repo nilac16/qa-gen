@@ -28,7 +28,7 @@ struct qagen_rtplan {
         wchar_t machine[3];
         uint8_t rs_id;
         wchar_t name[6];
-        wchar_t desc[22];
+        wchar_t desc[58];
         double  meterset;
     } *beam;
 };

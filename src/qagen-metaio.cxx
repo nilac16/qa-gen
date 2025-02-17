@@ -1,4 +1,5 @@
 #include <cstdarg>
+#include <memory.h>
 #include "qagen-metaio.h"
 #include "qagen-error.h"
 #include <dcmtk/dcmdata/dcdeftag.h>
@@ -243,7 +244,7 @@ void MHDConverter::write_grid_scaling(DcmDataset *dset, DataT dosegridscaling)
     OFCondition stat;
 
     static_assert(std::is_floating_point<DataT>::value);
-    std::sprintf(buf, "%1.10e", dosegridscaling);
+    std::snprintf(buf, BUFLEN(buf), "%1.10e", dosegridscaling);
     stat = dset->putAndInsertString(DCM_DoseGridScaling, buf);
     Exception::ofcheck(stat, L"MHD conversion: Failed to update DoseGridScaling");
 }
@@ -269,11 +270,13 @@ void MHDConverter::convert_pixels(DcmDataset *dset)
     const size_t n = framelen * m_mhd.DimSize(2);
     const DataT *dptr = reinterpret_cast<DataT *>(m_mhd.ElementData());
     const DataT dosegridscal = datamax(dptr, dptr + n) / (DataT)std::numeric_limits<PixelT>::max();
-    PixelT *dest, *dstptr;
+    std::unique_ptr<PixelT[]> dest;
+    PixelT *dstptr;
     OFCondition stat;
 
     write_grid_scaling(dset, dosegridscal);
-    dest = dstptr = new PixelT[n];
+    dest = std::make_unique<PixelT[]>(n);
+    dstptr = dest.get();
     /* Write each frame backwards */
     dptr += framelen;
     for (int k = 0; k < m_mhd.DimSize(2); k++) {
@@ -283,8 +286,7 @@ void MHDConverter::convert_pixels(DcmDataset *dset)
         dptr += 2 * framelen;
         dstptr += framelen;
     }
-    stat = dset->putAndInsertUint8Array(DCM_PixelData, reinterpret_cast<Uint8 *>(dest), static_cast<unsigned long>(n * sizeof *dest));
-    delete[] dest;
+    stat = dset->putAndInsertUint8Array(DCM_PixelData, reinterpret_cast<Uint8 *>(dest.get()), static_cast<unsigned long>(n * sizeof (PixelT)));
     Exception::ofcheck(stat, L"Failed to set the pixel data");
 }
 

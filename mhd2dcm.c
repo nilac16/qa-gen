@@ -67,7 +67,7 @@ int wmain(int argc, wchar_t *argv[])
         .cbdata    = NULL,
         .threshold = QAGEN_LOG_INFO
     };
-    int res = 0;
+    int res = 0, i;
 
     if (qagen_log_add(&lf)) {
         fputws(L"mhd2dcm: Error: Failed to add log file\n", stderr);
@@ -77,14 +77,19 @@ int wmain(int argc, wchar_t *argv[])
         print_usage();
         return 1;
     }
-    if ((res = main_run(argv[1], qagen_path_create(argv[1]), argv[2]))) {
-        qagen_error_string(&erctx, &ermsg);
-        if (ermsg[0]) {
-            fwprintf(stderr, L"mhd2dcm: Error: %s: %s", erctx, ermsg);
-        } else {
-            fwprintf(stderr, L"mhd2dcm: Error: %s", erctx);
+
+    argc--;
+    for (i = 1; i < argc; i++) {
+        if ((res = main_run(argv[i], qagen_path_create(argv[i]), argv[argc]))) {
+            qagen_error_string(&erctx, &ermsg);
+            if (ermsg[0]) {
+                fwprintf(stderr, L"mhd2dcm: Error: %s: %s", erctx, ermsg);
+            } else {
+                fwprintf(stderr, L"mhd2dcm: Error: %s", erctx);
+            }
         }
     }
+
     qagen_log_cleanup();
     return res;
 }

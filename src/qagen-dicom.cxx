@@ -154,7 +154,7 @@ void RPReader::read_number_of_beams(void)
 void RPReader::alloc_beams(void)
 {
     void *ptr;
-    
+
     ptr = qagen_malloc(sizeof *m_rp->beam * m_rp->nbeams);
     if (ptr) {
         m_rp->beam = reinterpret_cast<struct qagen_rtplan::qagen_rtbeam *>(ptr);
@@ -175,22 +175,20 @@ void RPReader::alloc_beams(void)
  *  @param n
  *      Maximum number of wide characters that can be contained in @p dst
  *  @returns Nothing, you weren't checking the error state anyway :p
+ *  @todo This function is super-unsafe and periodically bites me in the ass.
+ *      Figure this out
  */
 static void null_mbstowcs(wchar_t dst[], const char *src, size_t n)
 {
     static const char nulterm = '\0';
 
     src = (src) ? src : &nulterm;
-    std::mbstowcs(dst, src, n);
-    dst[n - 1] = L'\0'; /* FFS */
+    std::mbstowcs(dst, src, n); /* `n` is the number of MBchars, not the wchar length of `dst` */
+    dst[n - 1] = L'\0'; /* FFS (this still isn't working) */
 }
 
 
 void RPReader::read_single_beam(DcmItem *seqitem, std::uint32_t i)
-/** OK, changing folders around has revealed a bug
- *  If (no value) is available for a string tag, DCMTK makes the string pointer
- *  NULL. (why??? just point it at '\0')
- */
 {
     static const wchar_t *failfmt = L"RTPlan is missing %s for beam %u";
     OFCondition stat;
@@ -293,7 +291,7 @@ RDReader::RDReader(const wchar_t *filename, struct qagen_rtdose *rd):
     DCMReader(filename),
     m_rd(rd)
 {
-    
+
 }
 
 
